@@ -3,10 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { FaEdit, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function Market() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [products, setProducts] = useState([]);
   const [priceTypes, setPriceTypes] = useState([]);
@@ -78,6 +82,7 @@ function Market() {
       const response = await axios.get(backendUrl + "/api/market_price/getAll");
       const data = response?.data?.result ?? [];
       setRows(Array.isArray(data) ? data : []);
+      setCurrentPage(1);
     } catch (error) {
       console.error(error);
       const message =
@@ -212,18 +217,31 @@ function Market() {
     return String(value);
   };
 
+  const sortedRows = useMemo(() => {
+    return rows.slice().sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+  }, [rows]);
+
+  const totalPages = useMemo(() => {
+    const size = Math.max(1, Number(pageSize) || 10);
+    return Math.max(1, Math.ceil(sortedRows.length / size));
+  }, [sortedRows.length, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
+
+  const pagedRows = useMemo(() => {
+    const size = Math.max(1, Number(pageSize) || 10);
+    const start = (currentPage - 1) * size;
+    return sortedRows.slice(start, start + size);
+  }, [sortedRows, currentPage, pageSize]);
+
   const tableBody = (() => {
     if (loading) {
-      return [
-        <tr key="loading">
-          <td className="px-4 py-4" colSpan={8}>
-            Loading...
-          </td>
-        </tr>,
-      ];
+      return [];
     }
 
-    if (rows.length === 0) {
+    if (pagedRows.length === 0) {
       return [
         <tr key="empty">
           <td className="px-4 py-4" colSpan={8}>
@@ -233,10 +251,7 @@ function Market() {
       ];
     }
 
-    return rows
-      .slice()
-      .sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
-      .map((row) => {
+    return pagedRows.map((row) => {
         const hasProductId = row.product_id !== null && row.product_id !== undefined;
         const hasPriceTypeId = row.price_type_id !== null && row.price_type_id !== undefined;
         const hasEconomicCenterId =
@@ -420,13 +435,6 @@ function Market() {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-700">Market Price Management</h2>
-        <button
-          onClick={() => setRefreshKey((k) => k + 1)}
-          className="px-3 py-2 rounded-md border border-gray-300 bg-white"
-          type="button"
-        >
-          Refresh
-        </button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
@@ -462,34 +470,72 @@ function Market() {
             >
               {isUploading ? "Uploading..." : "Upload"}
             </button>
-            <button
-              type="button"
-              onClick={() => setPdfFile(null)}
-              className="px-4 py-2 rounded-md border border-gray-300 bg-white"
-            >
-              Clear
-            </button>
           </div>
         </form>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-gray-700">
-            <tr>
-              <th className="text-left px-4 py-3 border-b">ID</th>
-              <th className="text-left px-4 py-3 border-b">Date</th>
-              <th className="text-left px-4 py-3 border-b">Price</th>
-              <th className="text-left px-4 py-3 border-b">Product</th>
-              <th className="text-left px-4 py-3 border-b">Price Type</th>
-              <th className="text-left px-4 py-3 border-b">Economic Center</th>
-              <th className="text-left px-4 py-3 border-b">Verified</th>
-              <th className="text-left px-4 py-3 border-b">Actions</th>
-            </tr>
-          </thead>
+        {loading ? (
+          <LoadingSpinner label="Loading market prices..." />
+        ) : (
+          <>
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 text-gray-700">
+              <div className="text-sm">
+                Page {currentPage} / {totalPages}
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm">Rows</label>
+                <select
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                  value={String(pageSize)}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
 
-          <tbody className="text-gray-700">{tableBody}</tbody>
-        </table>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 text-gray-700">
+                <tr>
+                  <th className="text-left px-4 py-3 border-b">ID</th>
+                  <th className="text-left px-4 py-3 border-b">Date</th>
+                  <th className="text-left px-4 py-3 border-b">Price</th>
+                  <th className="text-left px-4 py-3 border-b">Product</th>
+                  <th className="text-left px-4 py-3 border-b">Price Type</th>
+                  <th className="text-left px-4 py-3 border-b">Economic Center</th>
+                  <th className="text-left px-4 py-3 border-b">Verified</th>
+                  <th className="text-left px-4 py-3 border-b">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody className="text-gray-700">{tableBody}</tbody>
+            </table>
+          </>
+        )}
       </div>
     </div>
   );
