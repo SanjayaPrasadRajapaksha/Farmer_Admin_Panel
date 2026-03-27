@@ -12,6 +12,14 @@ function Market() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [filters, setFilters] = useState({
+    date: "",
+    productId: "",
+    priceTypeId: "",
+    economicCenterId: "",
+    verified: "", // "" | "true" | "false"
+  });
+
   const [products, setProducts] = useState([]);
   const [priceTypes, setPriceTypes] = useState([]);
   const [economicCenters, setEconomicCenters] = useState([]);
@@ -221,10 +229,41 @@ function Market() {
     return rows.slice().sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
   }, [rows]);
 
+  const filteredRows = useMemo(() => {
+    const dateNeedle = String(filters.date || "").trim();
+    const verifiedFilter = String(filters.verified || "");
+    return sortedRows.filter((row) => {
+      if (dateNeedle) {
+        const rowDate = String(row.date ?? "");
+        if (!rowDate.includes(dateNeedle)) return false;
+      }
+
+      if (filters.productId) {
+        if (String(row.product_id ?? "") !== String(filters.productId)) return false;
+      }
+
+      if (filters.priceTypeId) {
+        if (String(row.price_type_id ?? "") !== String(filters.priceTypeId)) return false;
+      }
+
+      if (filters.economicCenterId) {
+        if (String(row.economic_center_location_id ?? "") !== String(filters.economicCenterId)) return false;
+      }
+
+      if (verifiedFilter) {
+        const rowVerified = Boolean(row.verify);
+        if (verifiedFilter === "true" && !rowVerified) return false;
+        if (verifiedFilter === "false" && rowVerified) return false;
+      }
+
+      return true;
+    });
+  }, [sortedRows, filters]);
+
   const totalPages = useMemo(() => {
     const size = Math.max(1, Number(pageSize) || 10);
-    return Math.max(1, Math.ceil(sortedRows.length / size));
-  }, [sortedRows.length, pageSize]);
+    return Math.max(1, Math.ceil(filteredRows.length / size));
+  }, [filteredRows.length, pageSize]);
 
   useEffect(() => {
     setCurrentPage((p) => Math.min(Math.max(1, p), totalPages));
@@ -233,8 +272,8 @@ function Market() {
   const pagedRows = useMemo(() => {
     const size = Math.max(1, Number(pageSize) || 10);
     const start = (currentPage - 1) * size;
-    return sortedRows.slice(start, start + size);
-  }, [sortedRows, currentPage, pageSize]);
+    return filteredRows.slice(start, start + size);
+  }, [filteredRows, currentPage, pageSize]);
 
   const tableBody = (() => {
     if (loading) {
@@ -474,7 +513,7 @@ function Market() {
         </form>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {loading ? (
           <LoadingSpinner label="Loading market prices..." />
         ) : (
@@ -518,8 +557,116 @@ function Market() {
               </div>
             </div>
 
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-gray-700">
+            <div className="px-4 py-3 border-b bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Date</p>
+                  <input
+                    type="date"
+                    value={filters.date}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, date: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Product</p>
+                  <select
+                    value={filters.productId}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, productId: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+                    disabled={refLoading}
+                  >
+                    <option value="">All</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.name ?? p.title ?? `#${p.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Price Type</p>
+                  <select
+                    value={filters.priceTypeId}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, priceTypeId: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+                    disabled={refLoading}
+                  >
+                    <option value="">All</option>
+                    {priceTypes.map((p) => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.name ?? p.type ?? `#${p.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Economic Center</p>
+                  <select
+                    value={filters.economicCenterId}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, economicCenterId: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+                    disabled={refLoading}
+                  >
+                    <option value="">All</option>
+                    {economicCenters.map((e) => (
+                      <option key={e.id} value={String(e.id)}>
+                        {e.name ?? e.location ?? `#${e.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Verified</p>
+                  <select
+                    value={filters.verified}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, verified: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+                  >
+                    <option value="">All</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-sm text-gray-600">Showing {filteredRows.length} result(s)</p>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
+                  onClick={() => {
+                    setFilters({ date: "", productId: "", priceTypeId: "", economicCenterId: "", verified: "" });
+                    setCurrentPage(1);
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[520px] overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-gray-700 sticky top-0 z-10">
                 <tr>
                   <th className="text-left px-4 py-3 border-b">ID</th>
                   <th className="text-left px-4 py-3 border-b">Date</th>
@@ -533,7 +680,8 @@ function Market() {
               </thead>
 
               <tbody className="text-gray-700">{tableBody}</tbody>
-            </table>
+              </table>
+            </div>
           </>
         )}
       </div>
