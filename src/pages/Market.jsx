@@ -513,7 +513,7 @@ function Market() {
         </form>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
         {loading ? (
           <LoadingSpinner label="Loading market prices..." />
         ) : (
@@ -664,9 +664,8 @@ function Market() {
               </div>
             </div>
 
-            <div className="max-h-[520px] overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-gray-700 sticky top-0 z-10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 text-gray-700">
                 <tr>
                   <th className="text-left px-4 py-3 border-b">ID</th>
                   <th className="text-left px-4 py-3 border-b">Date</th>
@@ -680,8 +679,7 @@ function Market() {
               </thead>
 
               <tbody className="text-gray-700">{tableBody}</tbody>
-              </table>
-            </div>
+            </table>
           </>
         )}
       </div>
