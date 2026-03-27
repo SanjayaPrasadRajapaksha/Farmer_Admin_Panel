@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 
@@ -26,7 +26,6 @@ function Market() {
     economic_center_location_id: "",
     price_type_id: "",
     product_id: "",
-    isVerify: false,
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -55,7 +54,7 @@ function Market() {
       const [productRes, priceTypeRes, economicRes] = await Promise.all([
         axios.get(backendUrl + "/api/product/getAll"),
         axios.get(backendUrl + "/api/price_type/getAll"),
-        axios.get(backendUrl + "/api/segment/getAll").catch(() => axios.get(backendUrl + "/api/economic_center/getAll")),
+        axios.get(backendUrl + "/api/economic_center/getAll"),
       ]);
 
       setProducts(productRes?.data?.result ?? productRes?.data ?? []);
@@ -153,7 +152,6 @@ function Market() {
       price_type_id:
         row.price_type_id === null || row.price_type_id === undefined ? "" : String(row.price_type_id),
       product_id: row.product_id === null || row.product_id === undefined ? "" : String(row.product_id),
-      isVerify: Boolean(row.verify),
     });
     setIsEditOpen(true);
   };
@@ -185,7 +183,6 @@ function Market() {
         economic_center_location_id: toOptionalInt(editPayload.economic_center_location_id),
         price_type_id: toOptionalInt(editPayload.price_type_id),
         product_id: toOptionalInt(editPayload.product_id),
-        isVerify: Boolean(editPayload.isVerify),
       });
       toast.success("Updated");
       setIsEditOpen(false);
@@ -306,8 +303,13 @@ function Market() {
           <div className="relative mx-auto mt-24 w-[min(92vw,720px)] bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-700">Update Market Price #{editRowId}</h3>
-              <button type="button" onClick={closeUpdatePopup} className="px-3 py-1 rounded-md border border-gray-300">
-                Close
+              <button
+                type="button"
+                className="p-2 rounded hover:bg-gray-100"
+                aria-label="Close"
+                onClick={closeUpdatePopup}
+              >
+                <FaTimes />
               </button>
             </div>
 
@@ -390,16 +392,6 @@ function Market() {
                       ))}
                     </select>
                   </div>
-
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={Boolean(editPayload.isVerify)}
-                      onChange={(e) => setEditPayload((p) => ({ ...p, isVerify: e.target.checked }))}
-                    />
-                    <span>isVerify</span>
-                  </label>
 
                   <div className="flex gap-3 pt-1 md:col-span-2">
                     <button
