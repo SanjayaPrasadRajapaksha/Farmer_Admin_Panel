@@ -518,45 +518,6 @@ function Market() {
           <LoadingSpinner label="Loading market prices..." />
         ) : (
           <>
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 text-gray-700">
-              <div className="text-sm">
-                Page {currentPage} / {totalPages}
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-sm">Rows</label>
-                <select
-                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
-                  value={String(pageSize)}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="50">50</option>
-                </select>
-
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-
             <div className="px-4 py-3 border-b bg-white">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
@@ -680,6 +641,45 @@ function Market() {
 
               <tbody className="text-gray-700">{tableBody}</tbody>
             </table>
+
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 text-gray-700">
+              <div className="text-sm">
+                Page {currentPage} / {totalPages}
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm">Rows</label>
+                <select
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                  value={String(pageSize)}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>
