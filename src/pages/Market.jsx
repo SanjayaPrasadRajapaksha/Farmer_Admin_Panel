@@ -11,6 +11,8 @@ function Market() {
   const [products, setProducts] = useState([]);
   const [priceTypes, setPriceTypes] = useState([]);
   const [economicCenters, setEconomicCenters] = useState([]);
+  const [refLoading, setRefLoading] = useState(false);
+  const [refError, setRefError] = useState("");
 
   const [pdfFile, setPdfFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -47,19 +49,27 @@ function Market() {
   }, [economicCenters]);
 
   const fetchReferenceData = async () => {
+    setRefLoading(true);
+    setRefError("");
     try {
       const [productRes, priceTypeRes, economicRes] = await Promise.all([
         axios.get(backendUrl + "/api/product/getAll"),
         axios.get(backendUrl + "/api/price_type/getAll"),
-        axios.get(backendUrl + "/api/economic_center/getAll"),
+        axios.get(backendUrl + "/api/segment/getAll").catch(() => axios.get(backendUrl + "/api/economic_center/getAll")),
       ]);
 
       setProducts(productRes?.data?.result ?? productRes?.data ?? []);
       setPriceTypes(priceTypeRes?.data?.result ?? priceTypeRes?.data ?? []);
       setEconomicCenters(economicRes?.data?.result ?? economicRes?.data ?? []);
     } catch (error) {
-      // Reference data is optional for CRUD to work (IDs can be typed)
       console.error(error);
+      setRefError(
+        error.response?.data?.message ||
+          error.message ||
+          `Failed to load reference data from ${backendUrl}`
+      );
+    } finally {
+      setRefLoading(false);
     }
   };
 
@@ -301,28 +311,10 @@ function Market() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Details (JSON)</p>
-                <pre className="text-xs bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto max-h-64">
-{JSON.stringify(
-  {
-    price: Number(editPayload.price),
-    Date: editPayload.Date,
-    economic_center_location_id: toOptionalInt(editPayload.economic_center_location_id),
-    price_type_id: toOptionalInt(editPayload.price_type_id),
-    product_id: toOptionalInt(editPayload.product_id),
-    isVerify: Boolean(editPayload.isVerify),
-  },
-  null,
-  2
-)}
-                </pre>
-              </div>
-
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">Edit</p>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-gray-600 mb-1">price</p>
                     <input
@@ -348,35 +340,55 @@ function Market() {
 
                   <div>
                     <p className="text-xs text-gray-600 mb-1">economic_center_location_id</p>
-                    <input
-                      type="number"
-                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                    <select
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
                       value={editPayload.economic_center_location_id}
-                      onChange={(e) => setEditPayload((p) => ({ ...p, economic_center_location_id: e.target.value }))}
-                      placeholder="e.g. 1"
-                    />
+                      onChange={(e) =>
+                        setEditPayload((p) => ({ ...p, economic_center_location_id: e.target.value }))
+                      }
+                      disabled={refLoading}
+                    >
+                      <option value="">{refLoading ? "Loading..." : "Select economic center"}</option>
+                      {economicCenters.map((e) => (
+                        <option key={e.id} value={String(e.id)}>
+                          {e.name ?? e.location ?? `#${e.id}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <p className="text-xs text-gray-600 mb-1">price_type_id</p>
-                    <input
-                      type="number"
-                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                    <select
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
                       value={editPayload.price_type_id}
                       onChange={(e) => setEditPayload((p) => ({ ...p, price_type_id: e.target.value }))}
-                      placeholder="e.g. 1"
-                    />
+                      disabled={refLoading}
+                    >
+                      <option value="">{refLoading ? "Loading..." : "Select price type"}</option>
+                      {priceTypes.map((p) => (
+                        <option key={p.id} value={String(p.id)}>
+                          {p.name ?? p.type ?? `#${p.id}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <p className="text-xs text-gray-600 mb-1">product_id</p>
-                    <input
-                      type="number"
-                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                    <select
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
                       value={editPayload.product_id}
                       onChange={(e) => setEditPayload((p) => ({ ...p, product_id: e.target.value }))}
-                      placeholder="e.g. 2"
-                    />
+                      disabled={refLoading}
+                    >
+                      <option value="">{refLoading ? "Loading..." : "Select product"}</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={String(p.id)}>
+                          {p.name ?? p.title ?? `#${p.id}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -389,7 +401,7 @@ function Market() {
                     <span>isVerify</span>
                   </label>
 
-                  <div className="flex gap-3 pt-1">
+                  <div className="flex gap-3 pt-1 md:col-span-2">
                     <button
                       type="button"
                       disabled={isUpdating}
@@ -430,6 +442,12 @@ function Market() {
           <h3 className="font-medium text-gray-700">Upload Market Prices (PDF)</h3>
         </div>
 
+        {refError ? (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {refError}
+          </div>
+        ) : null}
+
         <form onSubmit={onUploadPdf} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
             <p className="text-sm font-medium text-gray-700 mb-2">PDF File</p>
@@ -439,7 +457,9 @@ function Market() {
               accept="application/pdf"
               onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
             />
-            <p className="text-xs text-gray-500 mt-2">Field name must be <span className="font-mono">pdf</span> (matches backend).</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Field name must be <span className="font-mono">pdf</span> (matches backend).
+            </p>
           </div>
 
           <div className="flex items-end gap-3">
@@ -476,9 +496,7 @@ function Market() {
             </tr>
           </thead>
 
-          <tbody className="text-gray-700">
-            {tableBody}
-          </tbody>
+          <tbody className="text-gray-700">{tableBody}</tbody>
         </table>
       </div>
     </div>
