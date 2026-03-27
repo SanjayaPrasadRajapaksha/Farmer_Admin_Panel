@@ -20,7 +20,7 @@ function Sidebar() {
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/market">
                     <FaStore className="w-5 h-5" />
-                    <p className="hidden md:block">Market Management</p>
+                    <p className="hidden md:block">Market Price</p>
                 </NavLink>
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/report">
@@ -30,12 +30,12 @@ function Sidebar() {
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/feedback">
                     <FaComments className="w-5 h-5" />
-                    <p className="hidden md:block">Feedback Management</p>
+                    <p className="hidden md:block">Feedback </p>
                 </NavLink>
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/faq">
                     <FaQuestionCircle className="w-5 h-5" />
-                    <p className="hidden md:block">FAQ Management</p>
+                    <p className="hidden md:block">FAQ </p>
                 </NavLink>
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/setting">

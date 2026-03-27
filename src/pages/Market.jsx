@@ -372,7 +372,7 @@ function Market() {
                 <p className="text-sm font-medium text-gray-700 mb-2">Edit</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-gray-600 mb-1">price</p>
+                    <p className="text-xs text-gray-600 mb-1">Price</p>
                     <input
                       type="number"
                       step="0.01"
@@ -395,7 +395,7 @@ function Market() {
                   </div>
 
                   <div>
-                    <p className="text-xs text-gray-600 mb-1">economic_center_location_id</p>
+                    <p className="text-xs text-gray-600 mb-1">Economic Center</p>
                     <select
                       className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
                       value={editPayload.economic_center_location_id}
@@ -414,7 +414,7 @@ function Market() {
                   </div>
 
                   <div>
-                    <p className="text-xs text-gray-600 mb-1">price_type_id</p>
+                    <p className="text-xs text-gray-600 mb-1">Price Type</p>
                     <select
                       className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
                       value={editPayload.price_type_id}
@@ -431,7 +431,7 @@ function Market() {
                   </div>
 
                   <div>
-                    <p className="text-xs text-gray-600 mb-1">product_id</p>
+                    <p className="text-xs text-gray-600 mb-1">Product Name</p>
                     <select
                       className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
                       value={editPayload.product_id}
@@ -496,9 +496,7 @@ function Market() {
               accept="application/pdf"
               onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
             />
-            <p className="text-xs text-gray-500 mt-2">
-              Field name must be <span className="font-mono">pdf</span> (matches backend).
-            </p>
+            
           </div>
 
           <div className="flex items-end gap-3">
