@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
+import { FaEdit, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 
@@ -14,6 +15,18 @@ function Market() {
   const [pdfFile, setPdfFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editRowId, setEditRowId] = useState(null);
+  const [editPayload, setEditPayload] = useState({
+    price: "",
+    Date: "",
+    economic_center_location_id: "",
+    price_type_id: "",
+    product_id: "",
+    isVerify: false,
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const productById = useMemo(() => {
     const map = new Map();
@@ -58,7 +71,11 @@ function Market() {
       setRows(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Failed to fetch market prices");
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        `Failed to fetch market prices from ${backendUrl}`;
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -111,6 +128,64 @@ function Market() {
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Delete failed");
+    }
+  };
+
+  const openUpdatePopup = (row) => {
+    setEditRowId(row.id);
+    setEditPayload({
+      price: row.price ?? "",
+      Date: row.date ?? "",
+      economic_center_location_id:
+        row.economic_center_location_id === null || row.economic_center_location_id === undefined
+          ? ""
+          : String(row.economic_center_location_id),
+      price_type_id:
+        row.price_type_id === null || row.price_type_id === undefined ? "" : String(row.price_type_id),
+      product_id: row.product_id === null || row.product_id === undefined ? "" : String(row.product_id),
+      isVerify: Boolean(row.verify),
+    });
+    setIsEditOpen(true);
+  };
+
+  const closeUpdatePopup = () => {
+    if (isUpdating) return;
+    setIsEditOpen(false);
+    setEditRowId(null);
+  };
+
+  const toOptionalInt = (value) => {
+    if (value === "" || value === null || value === undefined) return null;
+    const parsed = Number.parseInt(String(value), 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const submitUpdate = async () => {
+    if (!editRowId) return;
+    if (String(editPayload.price).trim() === "" || String(editPayload.Date).trim() === "") {
+      toast.error("Price and Date are required");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await axios.put(backendUrl + `/api/market_price/updateById/${editRowId}`, {
+        price: editPayload.price,
+        Date: editPayload.Date,
+        economic_center_location_id: toOptionalInt(editPayload.economic_center_location_id),
+        price_type_id: toOptionalInt(editPayload.price_type_id),
+        product_id: toOptionalInt(editPayload.product_id),
+        isVerify: Boolean(editPayload.isVerify),
+      });
+      toast.success("Updated");
+      setIsEditOpen(false);
+      setEditRowId(null);
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Update failed");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -182,9 +257,24 @@ function Market() {
               </button>
             </td>
             <td className="px-4 py-3 border-b">
-              <div className="flex gap-3">
-                <button type="button" onClick={() => onDelete(row)} className="underline text-red-600">
-                  Delete
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => openUpdatePopup(row)}
+                  className="p-2 rounded-md border border-gray-300 bg-white"
+                  aria-label="Update"
+                  title="Update"
+                >
+                  <FaEdit className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(row)}
+                  className="p-2 rounded-md border border-gray-300 bg-white text-red-600"
+                  aria-label="Delete"
+                  title="Delete"
+                >
+                  <FaTrash className="w-4 h-4" />
                 </button>
               </div>
             </td>
@@ -195,6 +285,135 @@ function Market() {
 
   return (
     <div className="w-full">
+      {isEditOpen ? (
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            onClick={closeUpdatePopup}
+            aria-label="Close popup"
+          />
+          <div className="relative mx-auto mt-24 w-[min(92vw,720px)] bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-700">Update Market Price #{editRowId}</h3>
+              <button type="button" onClick={closeUpdatePopup} className="px-3 py-1 rounded-md border border-gray-300">
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Details (JSON)</p>
+                <pre className="text-xs bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto max-h-64">
+{JSON.stringify(
+  {
+    price: Number(editPayload.price),
+    Date: editPayload.Date,
+    economic_center_location_id: toOptionalInt(editPayload.economic_center_location_id),
+    price_type_id: toOptionalInt(editPayload.price_type_id),
+    product_id: toOptionalInt(editPayload.product_id),
+    isVerify: Boolean(editPayload.isVerify),
+  },
+  null,
+  2
+)}
+                </pre>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Edit</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">price</p>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                      value={editPayload.price}
+                      onChange={(e) => setEditPayload((p) => ({ ...p, price: e.target.value }))}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">Date</p>
+                    <input
+                      type="text"
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                      value={editPayload.Date}
+                      onChange={(e) => setEditPayload((p) => ({ ...p, Date: e.target.value }))}
+                      placeholder="YYYY-MM-DD"
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">economic_center_location_id</p>
+                    <input
+                      type="number"
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                      value={editPayload.economic_center_location_id}
+                      onChange={(e) => setEditPayload((p) => ({ ...p, economic_center_location_id: e.target.value }))}
+                      placeholder="e.g. 1"
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">price_type_id</p>
+                    <input
+                      type="number"
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                      value={editPayload.price_type_id}
+                      onChange={(e) => setEditPayload((p) => ({ ...p, price_type_id: e.target.value }))}
+                      placeholder="e.g. 1"
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">product_id</p>
+                    <input
+                      type="number"
+                      className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                      value={editPayload.product_id}
+                      onChange={(e) => setEditPayload((p) => ({ ...p, product_id: e.target.value }))}
+                      placeholder="e.g. 2"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={Boolean(editPayload.isVerify)}
+                      onChange={(e) => setEditPayload((p) => ({ ...p, isVerify: e.target.checked }))}
+                    />
+                    <span>isVerify</span>
+                  </label>
+
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="button"
+                      disabled={isUpdating}
+                      onClick={submitUpdate}
+                      className="px-4 py-2 rounded-md text-white bg-black disabled:opacity-60"
+                    >
+                      {isUpdating ? "Updating..." : "Update"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isUpdating}
+                      onClick={closeUpdatePopup}
+                      className="px-4 py-2 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-700">Market Price Management</h2>
         <button
