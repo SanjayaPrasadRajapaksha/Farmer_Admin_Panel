@@ -360,35 +360,62 @@ function Report() {
       doc.text(`Date: ${selectedDate}`, 40, 60);
       doc.text(`Prediction Date: ${tomorrowDate || "-"}`, 200, 60);
 
+      const diffModeLabel = differenceMode === "T_MINUS_D" ? "T-D" : "D-T";
+      const predDiffModeLabel = predDifferenceMode === "T_MINUS_D" ? "T-D" : "D-T";
+
       const head = [[
         "Product",
         `Dambulla (${selectedDate})`,
         `Tambuttegama (${selectedDate})`,
-        getDifferenceHeader(),
+        `${getDifferenceHeader()} (${diffModeLabel})`,
         `Predicted ${tomorrowDate || "tomorrow"} (D)`,
         `Predicted ${tomorrowDate || "tomorrow"} (T)`,
-        "Pred Diff",
+        `Pred Diff (${predDiffModeLabel})`,
       ]];
 
-      const body = filteredTableRows.map((r) => [
-        String(r.name ?? "-"),
-        formatPrice(r.dToday),
-        formatPrice(r.tToday),
-        (() => {
-          const diff = getDifferenceByMode(r.dToday, r.tToday);
-          if (diff === null) return "-";
-          const sign = diff > 0 ? "+" : diff < 0 ? "-" : "";
-          return `${sign}${formatPrice(Math.abs(diff))}`;
-        })(),
-        formatPrice(r.dPred),
-        formatPrice(r.tPred),
-        (() => {
-          const diff = getPredDifferenceByMode(r.dPred, r.tPred);
-          if (diff === null) return "-";
-          const sign = diff > 0 ? "+" : diff < 0 ? "-" : "";
-          return `${sign}${formatPrice(Math.abs(diff))}`;
-        })(),
-      ]);
+      const PDF_GREEN = [22, 163, 74];
+      const PDF_RED = [220, 38, 38];
+
+      const pdfCell = (content, textColor) => {
+        if (content === null || content === undefined) return "-";
+        const contentStr = String(content);
+        if (!textColor) return contentStr;
+        return { content: contentStr, styles: { textColor } };
+      };
+
+      const pdfSignedDiffCell = (diff) => {
+        const num = toFiniteNumberOrNull(diff);
+        if (num === null) return "-";
+        const absText = formatPrice(Math.abs(num));
+        if (num === 0) return absText;
+        const signText = (num > 0 ? "+" : "-") + absText;
+        return pdfCell(signText, num > 0 ? PDF_GREEN : PDF_RED);
+      };
+
+      const body = filteredTableRows.map((r) => {
+        const higherTodaySide = getHigherTodaySide(r.dToday, r.tToday);
+        const higherPredictedSide = getHigherPredictedSide(r.dPred, r.tPred);
+
+        const dTodayText = formatPrice(r.dToday);
+        const tTodayText = formatPrice(r.tToday);
+        const dPredText = formatPrice(r.dPred);
+        const tPredText = formatPrice(r.tPred);
+
+        const dTodayColor = higherTodaySide === "D" ? PDF_GREEN : higherTodaySide === "T" ? PDF_RED : null;
+        const tTodayColor = higherTodaySide === "T" ? PDF_GREEN : higherTodaySide === "D" ? PDF_RED : null;
+        const dPredColor = higherPredictedSide === "D" ? PDF_GREEN : higherPredictedSide === "T" ? PDF_RED : null;
+        const tPredColor = higherPredictedSide === "T" ? PDF_GREEN : higherPredictedSide === "D" ? PDF_RED : null;
+
+        return [
+          String(r.name ?? "-"),
+          dTodayText === "-" ? "-" : pdfCell(dTodayText, dTodayColor),
+          tTodayText === "-" ? "-" : pdfCell(tTodayText, tTodayColor),
+          pdfSignedDiffCell(getDifferenceByMode(r.dToday, r.tToday)),
+          dPredText === "-" ? "-" : pdfCell(dPredText, dPredColor),
+          tPredText === "-" ? "-" : pdfCell(tPredText, tPredColor),
+          pdfSignedDiffCell(getPredDifferenceByMode(r.dPred, r.tPred)),
+        ];
+      });
 
       autoTable(doc, {
         head,
