@@ -1,5 +1,8 @@
 import axios from "axios";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useEffect, useMemo, useState } from "react";
+import { TiArrowSortedUp } from "react-icons/ti";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -136,11 +139,11 @@ function Report() {
   };
 
   const compute7DayPrediction = (productId, centerId, dateStr) => {
-    // Predict "tomorrow" using the 7 previous days (excluding the selected date).
+    // Predict "tomorrow" using a 7-day average including the selected date.
     if (!productId || !centerId || !dateStr) return null;
 
     let sum = 0;
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 0; i < 7; i++) {
       const d = addDays(dateStr, -i);
       if (!d) return null;
       const p = getPrice(productId, centerId, d);
@@ -285,7 +288,143 @@ function Report() {
     const fixed = formatMoney(Math.abs(num));
     if (num > 0) return { text: fixed, cls: "text-green-600" };
     if (num < 0) return { text: fixed, cls: "text-red-600" };
-    return { text: fixed, cls: "text-gray-700" };
+    return { text: fixed, cls: "text-yellow-600" };
+  };
+
+  const getHigherPredictionSide = (dPred, tPred) => {
+    const dNum = Number(dPred);
+    const tNum = Number(tPred);
+    if (!Number.isFinite(dNum) || !Number.isFinite(tNum)) return null;
+    if (dNum === tNum) return null;
+    return dNum > tNum ? "D" : "T";
+  };
+
+  const onDownloadPdf = () => {
+    if (loading) return;
+    if (missingCenters) {
+      toast.error("Economic centers not found for Dambulla / Tambuttegama");
+      return;
+    }
+    if (!selectedDate) {
+      toast.error("Please select a date");
+      return;
+    }
+    if (filteredTableRows.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    try {
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+      doc.setFontSize(14);
+      doc.text("Market Price Comparison", 40, 40);
+
+      doc.setFontSize(10);
+      doc.text(`Date: ${selectedDate}`, 40, 60);
+      doc.text(`Previous Date: ${prevDateLabel}`, 200, 60);
+      doc.text(`Prediction Date: ${tomorrowDate || "-"}`, 420, 60);
+
+      const head = [[
+        "Product",
+        `Dambulla (${selectedDate})`,
+        `Change vs ${prevDateLabel}`,
+        `Tambuttegama (${selectedDate})`,
+        `Change vs ${prevDateLabel}`,
+        `Predicted ${tomorrowDate || "tomorrow"} (D)`,
+        `Predicted ${tomorrowDate || "tomorrow"} (T)`,
+      ]];
+
+      const rowMeta = filteredTableRows.map((r) => ({
+        dDelta: Number.isFinite(Number(r.dDelta)) ? Number(r.dDelta) : null,
+        tDelta: Number.isFinite(Number(r.tDelta)) ? Number(r.tDelta) : null,
+        higherPredSide: getHigherPredictionSide(r.dPred, r.tPred),
+        dPred: Number.isFinite(Number(r.dPred)) ? Number(r.dPred) : null,
+        tPred: Number.isFinite(Number(r.tPred)) ? Number(r.tPred) : null,
+      }));
+
+      const body = filteredTableRows.map((r) => {
+        const dDelta = formatDelta(r.dDelta);
+        const tDelta = formatDelta(r.tDelta);
+        return [
+          String(r.name ?? "-"),
+          formatPrice(r.dToday),
+          dDelta?.text ?? "-",
+          formatPrice(r.tToday),
+          tDelta?.text ?? "-",
+          formatPrice(r.dPred),
+          formatPrice(r.tPred),
+        ];
+      });
+
+      autoTable(doc, {
+        head,
+        body,
+        startY: 80,
+        styles: { fontSize: 9, cellPadding: 4, overflow: "linebreak" },
+        headStyles: { fillColor: [245, 245, 245], textColor: [55, 65, 81] },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        margin: { left: 40, right: 40 },
+        didParseCell: (data) => {
+          if (data.section !== "body") return;
+
+          // Tailwind-ish colors used in the UI
+          const green600 = [22, 163, 74];
+          const red600 = [220, 38, 38];
+          const yellow600 = [202, 138, 4];
+          const gray700 = [55, 65, 81];
+
+          const meta = rowMeta[data.row.index];
+          if (!meta) return;
+
+          // Delta columns (indexes based on the table header)
+          if (data.column.index === 2) {
+            const v = meta.dDelta;
+            if (v === null) data.cell.styles.textColor = gray700;
+            else if (v > 0) data.cell.styles.textColor = green600;
+            else if (v < 0) data.cell.styles.textColor = red600;
+            else data.cell.styles.textColor = yellow600;
+          }
+
+          if (data.column.index === 4) {
+            const v = meta.tDelta;
+            if (v === null) data.cell.styles.textColor = gray700;
+            else if (v > 0) data.cell.styles.textColor = green600;
+            else if (v < 0) data.cell.styles.textColor = red600;
+            else data.cell.styles.textColor = yellow600;
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section !== "body") return;
+
+          const meta = rowMeta[data.row.index];
+          if (!meta?.higherPredSide) return;
+
+          const isDCell = data.column.index === 5 && meta.higherPredSide === "D";
+          const isTCell = data.column.index === 6 && meta.higherPredSide === "T";
+          if (!isDCell && !isTCell) return;
+
+          // Only show arrow if the predicted value exists
+          if (isDCell && meta.dPred === null) return;
+          if (isTCell && meta.tPred === null) return;
+
+          const arrowX = data.cell.x + data.cell.width - 10;
+          const arrowY = data.cell.y + data.cell.height / 2 + 3;
+
+          data.doc.setTextColor(74, 222, 128); // green-400
+          data.doc.setFontSize(12);
+          data.doc.text("↑", arrowX, arrowY, { align: "right" });
+          data.doc.setTextColor(0, 0, 0);
+          data.doc.setFontSize(9);
+        },
+      });
+
+      const safeDate = String(selectedDate || "").trim() || "date";
+      doc.save(`market-price-report_${safeDate}.pdf`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to generate PDF");
+    }
   };
 
   const missingCenters = !dambullaCenterId || !tambuttegamaCenterId;
@@ -294,6 +433,14 @@ function Report() {
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-700">Market Price Comparison</h2>
+        <button
+          type="button"
+          className="px-3 py-2 rounded-md bg-black text-white text-sm disabled:opacity-60"
+          disabled={loading || missingCenters || filteredTableRows.length === 0}
+          onClick={onDownloadPdf}
+        >
+          Download PDF
+        </button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
@@ -301,7 +448,7 @@ function Report() {
           <div>
             <h3 className="text-base font-semibold text-gray-800">Daily: Dambulla vs Tambuttegama</h3>
             <p className="text-sm text-gray-500 mt-1">
-              Compares today vs previous day and predicts {tomorrowDate || "tomorrow"} using the previous 7 days average.
+              Compares today vs previous day and predicts {tomorrowDate || "tomorrow"} using a 7-day average (including the selected date).
             </p>
           </div>
         </div>
@@ -426,6 +573,7 @@ function Report() {
                   pagedTableRows.map((r) => {
                     const dDelta = formatDelta(r.dDelta);
                     const tDelta = formatDelta(r.tDelta);
+                    const higherPredSide = getHigherPredictionSide(r.dPred, r.tPred);
                     return (
                       <tr key={r.productId} className="hover:bg-gray-50">
                         <td className="px-4 py-3 border-b">{r.name}</td>
@@ -433,8 +581,22 @@ function Report() {
                         <td className={`px-4 py-3 border-b ${dDelta.cls}`}>{dDelta.text}</td>
                         <td className="px-4 py-3 border-b">{formatPrice(r.tToday)}</td>
                         <td className={`px-4 py-3 border-b ${tDelta.cls}`}>{tDelta.text}</td>
-                        <td className="px-4 py-3 border-b">{formatPrice(r.dPred)}</td>
-                        <td className="px-4 py-3 border-b">{formatPrice(r.tPred)}</td>
+                        <td className="px-4 py-3 border-b">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{formatPrice(r.dPred)}</span>
+                            {higherPredSide === "D" ? (
+                              <TiArrowSortedUp className="text-green-400 text-2xl" title="Higher predicted price" />
+                            ) : null}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{formatPrice(r.tPred)}</span>
+                            {higherPredSide === "T" ? (
+                              <TiArrowSortedUp className="text-green-400 text-2xl" title="Higher predicted price" />
+                            ) : null}
+                          </span>
+                        </td>
                       </tr>
                     );
                   })
