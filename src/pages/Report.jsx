@@ -2,7 +2,7 @@ import axios from "axios";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useEffect, useMemo, useState } from "react";
-import { TiArrowSortedUp } from "react-icons/ti";
+import { TiArrowSortedDown, TiArrowSortedUp } from "react-icons/ti";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -24,6 +24,9 @@ function Report() {
     categoryId: "",
   });
 
+  const [differenceMode, setDifferenceMode] = useState("D_MINUS_T");
+  const [predDifferenceMode, setPredDifferenceMode] = useState("D_MINUS_T");
+
   const productById = useMemo(() => {
     const map = new Map();
     for (const p of products) map.set(String(p.id), p);
@@ -40,6 +43,13 @@ function Report() {
     const y = date.getUTCFullYear();
     const m = String(date.getUTCMonth() + 1).padStart(2, "0");
     const d = String(date.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const formatLocalIsoDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   };
 
@@ -110,8 +120,13 @@ function Report() {
   useEffect(() => {
     if (selectedDate) return;
     if (availableDates.length === 0) return;
+    const todayIso = formatLocalIsoDate(new Date());
+    if (availableDatesSet.has(todayIso)) {
+      setSelectedDate(todayIso);
+      return;
+    }
     setSelectedDate(availableDates[availableDates.length - 1]);
-  }, [availableDates, selectedDate]);
+  }, [availableDates, availableDatesSet, selectedDate]);
 
   const priceIndex = useMemo(() => {
     const map = new Map();
@@ -153,15 +168,7 @@ function Report() {
     return sum / 7;
   };
 
-  const prevDate = useMemo(() => (selectedDate ? addDays(selectedDate, -1) : ""), [selectedDate]);
   const tomorrowDate = useMemo(() => (selectedDate ? addDays(selectedDate, 1) : ""), [selectedDate]);
-
-  const prevDateInData = useMemo(() => {
-    if (!prevDate) return false;
-    return availableDatesSet.has(String(prevDate));
-  }, [prevDate, availableDatesSet]);
-
-  const prevDateLabel = prevDateInData ? prevDate : "-";
 
   const tableRows = useMemo(() => {
     if (!selectedDate) return [];
@@ -189,11 +196,6 @@ function Report() {
 
       const dToday = getPrice(productId, dambullaCenterId, selectedDate);
       const tToday = getPrice(productId, tambuttegamaCenterId, selectedDate);
-      const dPrev = prevDateInData ? getPrice(productId, dambullaCenterId, prevDate) : null;
-      const tPrev = prevDateInData ? getPrice(productId, tambuttegamaCenterId, prevDate) : null;
-
-      const dDelta = dToday !== null && dPrev !== null ? dToday - dPrev : null;
-      const tDelta = tToday !== null && tPrev !== null ? tToday - tPrev : null;
 
       const dPred = compute7DayPrediction(productId, dambullaCenterId, selectedDate);
       const tPred = compute7DayPrediction(productId, tambuttegamaCenterId, selectedDate);
@@ -205,15 +207,24 @@ function Report() {
         categoryName,
         dToday,
         tToday,
-        dDelta,
-        tDelta,
         dPred,
         tPred,
       });
     }
 
-    // Desc by product id for stable display
-    rowsOut.sort((a, b) => Number(b.productId) - Number(a.productId));
+    // Sort by highest selected-date price so top rows show high prices.
+    rowsOut.sort((a, b) => {
+      const aMax = Math.max(
+        Number.isFinite(Number(a.dToday)) ? Number(a.dToday) : -Infinity,
+        Number.isFinite(Number(a.tToday)) ? Number(a.tToday) : -Infinity
+      );
+      const bMax = Math.max(
+        Number.isFinite(Number(b.dToday)) ? Number(b.dToday) : -Infinity,
+        Number.isFinite(Number(b.tToday)) ? Number(b.tToday) : -Infinity
+      );
+      if (bMax !== aMax) return bMax - aMax;
+      return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+    });
     return rowsOut;
   }, [
     selectedDate,
@@ -222,7 +233,6 @@ function Report() {
     marketPrices,
     productById,
     categoryById,
-    prevDate,
     priceIndex,
   ]);
 
@@ -281,22 +291,48 @@ function Report() {
     return formatMoney(value);
   };
 
-  const formatDelta = (value) => {
-    if (value === null || value === undefined) return { text: "-", cls: "text-gray-700" };
-    const num = Number(value);
-    if (!Number.isFinite(num)) return { text: "-", cls: "text-gray-700" };
-    const fixed = formatMoney(Math.abs(num));
-    if (num > 0) return { text: fixed, cls: "text-green-600" };
-    if (num < 0) return { text: fixed, cls: "text-red-600" };
-    return { text: fixed, cls: "text-yellow-600" };
+  const toFiniteNumberOrNull = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string" && value.trim() === "-") return null;
+    const num = typeof value === "number" ? value : Number.parseFloat(String(value));
+    return Number.isFinite(num) ? num : null;
   };
 
-  const getHigherPredictionSide = (dPred, tPred) => {
-    const dNum = Number(dPred);
-    const tNum = Number(tPred);
-    if (!Number.isFinite(dNum) || !Number.isFinite(tNum)) return null;
+  const getHigherTodaySide = (dToday, tToday) => {
+    const dNum = toFiniteNumberOrNull(dToday);
+    const tNum = toFiniteNumberOrNull(tToday);
+    if (dNum === null || tNum === null) return null;
     if (dNum === tNum) return null;
     return dNum > tNum ? "D" : "T";
+  };
+
+  const getHigherPredictedSide = (dPred, tPred) => {
+    const dNum = toFiniteNumberOrNull(dPred);
+    const tNum = toFiniteNumberOrNull(tPred);
+    if (dNum === null || tNum === null) return null;
+    if (dNum === tNum) return null;
+    return dNum > tNum ? "D" : "T";
+  };
+
+  const getDiffDT = (dValue, tValue) => {
+    const dNum = toFiniteNumberOrNull(dValue);
+    const tNum = toFiniteNumberOrNull(tValue);
+    if (dNum === null || tNum === null) return null;
+    return dNum - tNum;
+  };
+
+  const getDifferenceByMode = (dValue, tValue) => {
+    if (differenceMode === "T_MINUS_D") return getDiffDT(tValue, dValue);
+    return getDiffDT(dValue, tValue);
+  };
+
+  const getPredDifferenceByMode = (dValue, tValue) => {
+    if (predDifferenceMode === "T_MINUS_D") return getDiffDT(tValue, dValue);
+    return getDiffDT(dValue, tValue);
+  };
+
+  const getDifferenceHeader = () => {
+    return "Diff";
   };
 
   const onDownloadPdf = () => {
@@ -322,40 +358,37 @@ function Report() {
 
       doc.setFontSize(10);
       doc.text(`Date: ${selectedDate}`, 40, 60);
-      doc.text(`Previous Date: ${prevDateLabel}`, 200, 60);
-      doc.text(`Prediction Date: ${tomorrowDate || "-"}`, 420, 60);
+      doc.text(`Prediction Date: ${tomorrowDate || "-"}`, 200, 60);
 
       const head = [[
         "Product",
         `Dambulla (${selectedDate})`,
-        `Change vs ${prevDateLabel}`,
         `Tambuttegama (${selectedDate})`,
-        `Change vs ${prevDateLabel}`,
+        getDifferenceHeader(),
         `Predicted ${tomorrowDate || "tomorrow"} (D)`,
         `Predicted ${tomorrowDate || "tomorrow"} (T)`,
+        "Pred Diff",
       ]];
 
-      const rowMeta = filteredTableRows.map((r) => ({
-        dDelta: Number.isFinite(Number(r.dDelta)) ? Number(r.dDelta) : null,
-        tDelta: Number.isFinite(Number(r.tDelta)) ? Number(r.tDelta) : null,
-        higherPredSide: getHigherPredictionSide(r.dPred, r.tPred),
-        dPred: Number.isFinite(Number(r.dPred)) ? Number(r.dPred) : null,
-        tPred: Number.isFinite(Number(r.tPred)) ? Number(r.tPred) : null,
-      }));
-
-      const body = filteredTableRows.map((r) => {
-        const dDelta = formatDelta(r.dDelta);
-        const tDelta = formatDelta(r.tDelta);
-        return [
-          String(r.name ?? "-"),
-          formatPrice(r.dToday),
-          dDelta?.text ?? "-",
-          formatPrice(r.tToday),
-          tDelta?.text ?? "-",
-          formatPrice(r.dPred),
-          formatPrice(r.tPred),
-        ];
-      });
+      const body = filteredTableRows.map((r) => [
+        String(r.name ?? "-"),
+        formatPrice(r.dToday),
+        formatPrice(r.tToday),
+        (() => {
+          const diff = getDifferenceByMode(r.dToday, r.tToday);
+          if (diff === null) return "-";
+          const sign = diff > 0 ? "+" : diff < 0 ? "-" : "";
+          return `${sign}${formatPrice(Math.abs(diff))}`;
+        })(),
+        formatPrice(r.dPred),
+        formatPrice(r.tPred),
+        (() => {
+          const diff = getPredDifferenceByMode(r.dPred, r.tPred);
+          if (diff === null) return "-";
+          const sign = diff > 0 ? "+" : diff < 0 ? "-" : "";
+          return `${sign}${formatPrice(Math.abs(diff))}`;
+        })(),
+      ]);
 
       autoTable(doc, {
         head,
@@ -365,58 +398,6 @@ function Report() {
         headStyles: { fillColor: [245, 245, 245], textColor: [55, 65, 81] },
         alternateRowStyles: { fillColor: [250, 250, 250] },
         margin: { left: 40, right: 40 },
-        didParseCell: (data) => {
-          if (data.section !== "body") return;
-
-          // Tailwind-ish colors used in the UI
-          const green600 = [22, 163, 74];
-          const red600 = [220, 38, 38];
-          const yellow600 = [202, 138, 4];
-          const gray700 = [55, 65, 81];
-
-          const meta = rowMeta[data.row.index];
-          if (!meta) return;
-
-          // Delta columns (indexes based on the table header)
-          if (data.column.index === 2) {
-            const v = meta.dDelta;
-            if (v === null) data.cell.styles.textColor = gray700;
-            else if (v > 0) data.cell.styles.textColor = green600;
-            else if (v < 0) data.cell.styles.textColor = red600;
-            else data.cell.styles.textColor = yellow600;
-          }
-
-          if (data.column.index === 4) {
-            const v = meta.tDelta;
-            if (v === null) data.cell.styles.textColor = gray700;
-            else if (v > 0) data.cell.styles.textColor = green600;
-            else if (v < 0) data.cell.styles.textColor = red600;
-            else data.cell.styles.textColor = yellow600;
-          }
-        },
-        didDrawCell: (data) => {
-          if (data.section !== "body") return;
-
-          const meta = rowMeta[data.row.index];
-          if (!meta?.higherPredSide) return;
-
-          const isDCell = data.column.index === 5 && meta.higherPredSide === "D";
-          const isTCell = data.column.index === 6 && meta.higherPredSide === "T";
-          if (!isDCell && !isTCell) return;
-
-          // Only show arrow if the predicted value exists
-          if (isDCell && meta.dPred === null) return;
-          if (isTCell && meta.tPred === null) return;
-
-          const arrowX = data.cell.x + data.cell.width - 10;
-          const arrowY = data.cell.y + data.cell.height / 2 + 3;
-
-          data.doc.setTextColor(74, 222, 128); // green-400
-          data.doc.setFontSize(12);
-          data.doc.text("↑", arrowX, arrowY, { align: "right" });
-          data.doc.setTextColor(0, 0, 0);
-          data.doc.setFontSize(9);
-        },
       });
 
       const safeDate = String(selectedDate || "").trim() || "date";
@@ -448,12 +429,12 @@ function Report() {
           <div>
             <h3 className="text-base font-semibold text-gray-800">Daily: Dambulla vs Tambuttegama</h3>
             <p className="text-sm text-gray-500 mt-1">
-              Compares today vs previous day and predicts {tomorrowDate || "tomorrow"} using a 7-day average (including the selected date).
+              Compares Dambulla vs Tambuttegama for the selected date and predicts {tomorrowDate || "tomorrow"} using a 7-day average (including the selected date).
             </p>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
             <input
@@ -465,16 +446,6 @@ function Report() {
                 setCurrentPage(1);
               }}
               max={availableDates.length ? availableDates[availableDates.length - 1] : undefined}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Previous Date</label>
-            <input
-              type="text"
-              className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-gray-50"
-              value={prevDateLabel}
-              readOnly
             />
           </div>
 
@@ -555,11 +526,37 @@ function Report() {
                 <tr>
                   <th className="text-left px-4 py-3 border-b">Product</th>
                   <th className="text-left px-4 py-3 border-b">Dambulla ({selectedDate || "-"})</th>
-                  <th className="text-left px-4 py-3 border-b">Change vs {prevDateLabel}</th>
                   <th className="text-left px-4 py-3 border-b">Tambuttegama ({selectedDate || "-"})</th>
-                  <th className="text-left px-4 py-3 border-b">Change vs {prevDateLabel}</th>
+                  <th className="text-left px-4 py-3 border-b">
+                    <div className="flex items-center gap-2">
+                      <span>{getDifferenceHeader()}</span>
+                      <select
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                        value={differenceMode}
+                        onChange={(e) => setDifferenceMode(e.target.value)}
+                        aria-label="Select difference direction"
+                      >
+                        <option value="D_MINUS_T">D-T</option>
+                        <option value="T_MINUS_D">T-D</option>
+                      </select>
+                    </div>
+                  </th>
                   <th className="text-left px-4 py-3 border-b">Predicted {tomorrowDate || "tomorrow"} (D)</th>
                   <th className="text-left px-4 py-3 border-b">Predicted {tomorrowDate || "tomorrow"} (T)</th>
+                  <th className="text-left px-4 py-3 border-b">
+                    <div className="flex items-center gap-2">
+                      <span>Pred Diff</span>
+                      <select
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                        value={predDifferenceMode}
+                        onChange={(e) => setPredDifferenceMode(e.target.value)}
+                        aria-label="Select predicted diff direction"
+                      >
+                        <option value="D_MINUS_T">D-T</option>
+                        <option value="T_MINUS_D">T-D</option>
+                      </select>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="text-gray-700">
@@ -571,31 +568,70 @@ function Report() {
                   </tr>
                 ) : (
                   pagedTableRows.map((r) => {
-                    const dDelta = formatDelta(r.dDelta);
-                    const tDelta = formatDelta(r.tDelta);
-                    const higherPredSide = getHigherPredictionSide(r.dPred, r.tPred);
+                    const higherTodaySide = getHigherTodaySide(r.dToday, r.tToday);
+                    const higherPredictedSide = getHigherPredictedSide(r.dPred, r.tPred);
+                    const diffDT = getDifferenceByMode(r.dToday, r.tToday);
+                    const predDiffDT = getPredDifferenceByMode(r.dPred, r.tPred);
                     return (
                       <tr key={r.productId} className="hover:bg-gray-50">
                         <td className="px-4 py-3 border-b">{r.name}</td>
-                        <td className="px-4 py-3 border-b">{formatPrice(r.dToday)}</td>
-                        <td className={`px-4 py-3 border-b ${dDelta.cls}`}>{dDelta.text}</td>
-                        <td className="px-4 py-3 border-b">{formatPrice(r.tToday)}</td>
-                        <td className={`px-4 py-3 border-b ${tDelta.cls}`}>{tDelta.text}</td>
+                        <td className="px-4 py-3 border-b">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{formatPrice(r.dToday)}</span>
+                            {higherTodaySide === "D" ? (
+                              <TiArrowSortedUp className="text-green-600 text-xl" title="Higher than Tambuttegama" />
+                            ) : higherTodaySide === "T" ? (
+                              <TiArrowSortedDown className="text-red-600 text-xl" title="Lower than Tambuttegama" />
+                            ) : null}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{formatPrice(r.tToday)}</span>
+                            {higherTodaySide === "T" ? (
+                              <TiArrowSortedUp className="text-green-600 text-xl" title="Higher than Dambulla" />
+                            ) : higherTodaySide === "D" ? (
+                              <TiArrowSortedDown className="text-red-600 text-xl" title="Lower than Dambulla" />
+                            ) : null}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          {diffDT === null ? (
+                            "-"
+                          ) : (
+                            <span className={diffDT > 0 ? "text-green-700" : diffDT < 0 ? "text-red-700" : ""}>
+                              {(diffDT > 0 ? "+" : diffDT < 0 ? "-" : "") + formatPrice(Math.abs(diffDT))}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 border-b">
                           <span className="inline-flex items-center gap-2">
                             <span>{formatPrice(r.dPred)}</span>
-                            {higherPredSide === "D" ? (
-                              <TiArrowSortedUp className="text-green-400 text-2xl" title="Higher predicted price" />
+                            {higherPredictedSide === "D" ? (
+                              <TiArrowSortedUp className="text-green-600 text-xl" title="Higher predicted than Tambuttegama" />
+                            ) : higherPredictedSide === "T" ? (
+                              <TiArrowSortedDown className="text-red-600 text-xl" title="Lower predicted than Tambuttegama" />
                             ) : null}
                           </span>
                         </td>
                         <td className="px-4 py-3 border-b">
                           <span className="inline-flex items-center gap-2">
                             <span>{formatPrice(r.tPred)}</span>
-                            {higherPredSide === "T" ? (
-                              <TiArrowSortedUp className="text-green-400 text-2xl" title="Higher predicted price" />
+                            {higherPredictedSide === "T" ? (
+                              <TiArrowSortedUp className="text-green-600 text-xl" title="Higher predicted than Dambulla" />
+                            ) : higherPredictedSide === "D" ? (
+                              <TiArrowSortedDown className="text-red-600 text-xl" title="Lower predicted than Dambulla" />
                             ) : null}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          {predDiffDT === null ? (
+                            "-"
+                          ) : (
+                            <span className={predDiffDT > 0 ? "text-green-700" : predDiffDT < 0 ? "text-red-700" : ""}>
+                              {(predDiffDT > 0 ? "+" : predDiffDT < 0 ? "-" : "") + formatPrice(Math.abs(predDiffDT))}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
