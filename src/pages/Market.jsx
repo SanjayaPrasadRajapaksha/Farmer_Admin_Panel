@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { FaEdit, FaTimes, FaTrash } from "react-icons/fa";
+import { FaEdit, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -486,6 +486,19 @@ function Market() {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-700">Market Price Management</h2>
+        <button
+          type="button"
+          className="p-2 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+          disabled={loading || refLoading}
+          onClick={() => {
+            fetchReferenceData();
+            setRefreshKey((k) => k + 1);
+          }}
+          aria-label="Refresh market prices"
+          title="Refresh"
+        >
+          <FaSyncAlt className="w-4 h-4" />
+        </button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
