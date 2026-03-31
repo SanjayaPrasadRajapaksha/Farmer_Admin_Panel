@@ -27,6 +27,7 @@ function Market() {
   const [refError, setRefError] = useState("");
 
   const [pdfFile, setPdfFile] = useState(null);
+  const [pdfSource, setPdfSource] = useState("dambulla");
   const [isUploading, setIsUploading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -118,12 +119,23 @@ function Market() {
       return;
     }
 
+    const uploadPathBySource = {
+      dambulla: "/api/market_price/upload_dambulla",
+      tambuttegama: "/api/market_price/upload_tambuttegama",
+    };
+
+    const uploadPath = uploadPathBySource[pdfSource];
+    if (!uploadPath) {
+      toast.error("Please select a valid market for the PDF format");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("pdf", pdfFile);
 
     setIsUploading(true);
     try {
-      const response = await axios.post(backendUrl + "/api/market_price/upload", formData, {
+      const response = await axios.post(backendUrl + uploadPath, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       const inserted = response?.data?.insertedRecords;
@@ -476,9 +488,12 @@ function Market() {
         <h2 className="text-xl font-semibold text-gray-700">Market Price Management</h2>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium text-gray-700">Upload Market Prices (PDF)</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-gray-800">Upload Market Prices (PDF)</h3>
+            <p className="text-sm text-gray-500 mt-1">Upload a PDF to insert market prices into the system.</p>
+          </div>
         </div>
 
         {refError ? (
@@ -487,25 +502,38 @@ function Market() {
           </div>
         ) : null}
 
-        <form onSubmit={onUploadPdf} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form onSubmit={onUploadPdf} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Market (PDF)</label>
+            <select
+              className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+              value={pdfSource}
+              onChange={(e) => setPdfSource(e.target.value)}
+              disabled={isUploading}
+            >
+              <option value="dambulla">Dambulla</option>
+              <option value="tambuttegama">Tambuttegama</option>
+            </select>
+          </div>
+
           <div className="md:col-span-2">
-            <p className="text-sm font-medium text-gray-700 mb-2">PDF File</p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">PDF File</label>
             <input
               className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
               type="file"
               accept="application/pdf"
               onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+              disabled={isUploading}
             />
-            
           </div>
 
-          <div className="flex items-end gap-3">
+          <div className="flex items-end justify-start md:justify-end">
             <button
               type="submit"
               disabled={isUploading}
-              className="px-4 py-2 rounded-md text-white bg-black disabled:opacity-60"
+              className="w-full md:w-auto px-5 py-2 rounded-md text-white bg-black disabled:opacity-60"
             >
-              {isUploading ? "Uploading..." : "Upload"}
+              {isUploading ? "Uploading..." : "Upload PDF"}
             </button>
           </div>
         </form>
