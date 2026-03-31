@@ -13,6 +13,15 @@ function Product() {
   const [refLoading, setRefLoading] = useState(false);
   const [refError, setRefError] = useState("");
 
+  const [pageSize, setPageSize] = useState(9);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [filters, setFilters] = useState({
+    name: "",
+    unit: "",
+    categoryId: "",
+  });
+
   const [createPayload, setCreatePayload] = useState({
     name: "",
     unit: "1",
@@ -211,6 +220,49 @@ function Product() {
     }
   };
 
+  const filteredRows = useMemo(() => {
+    const nameNeedle = String(filters.name || "").trim().toLowerCase();
+    const unitNeedle = String(filters.unit || "").trim();
+    const categoryNeedle = String(filters.categoryId || "");
+
+    return rows.filter((row) => {
+      if (nameNeedle) {
+        const rowName = String(row.name ?? "").toLowerCase();
+        if (!rowName.includes(nameNeedle)) return false;
+      }
+
+      if (unitNeedle) {
+        const rowUnit = String(row.unit ?? "");
+        if (!rowUnit.includes(unitNeedle)) return false;
+      }
+
+      if (categoryNeedle) {
+        if (String(row.category_id ?? "") !== categoryNeedle) return false;
+      }
+
+      return true;
+    });
+  }, [rows, filters]);
+
+  const sortedFilteredRows = useMemo(() => {
+    return filteredRows.slice().sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+  }, [filteredRows]);
+
+  const totalPages = useMemo(() => {
+    const size = Math.max(1, Number(pageSize) || 9);
+    return Math.max(1, Math.ceil(sortedFilteredRows.length / size));
+  }, [sortedFilteredRows.length, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
+
+  const pagedRows = useMemo(() => {
+    const size = Math.max(1, Number(pageSize) || 9);
+    const start = (currentPage - 1) * size;
+    return sortedFilteredRows.slice(start, start + size);
+  }, [sortedFilteredRows, currentPage, pageSize]);
+
   return (
     <div className="w-full">
       {isEditOpen ? (
@@ -380,14 +432,77 @@ function Product() {
           <LoadingSpinner label="Loading products..." />
         ) : (
           <div className="p-4">
-            {rows.length === 0 ? (
+            <div className="mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="md:col-span-2">
+                  <p className="text-xs text-gray-600 mb-1">Name</p>
+                  <input
+                    type="text"
+                    value={filters.name}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, name: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                    placeholder="Search by name"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Unit</p>
+                  <input
+                    type="text"
+                    value={filters.unit}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, unit: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                    placeholder="e.g., 1"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Category</p>
+                  <select
+                    value={filters.categoryId}
+                    onChange={(e) => {
+                      setFilters((f) => ({ ...f, categoryId: e.target.value }));
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+                    disabled={refLoading}
+                  >
+                    <option value="">All</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={String(c.id)}>
+                        {c.name ?? `#${c.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-sm text-gray-600">Showing {filteredRows.length} result(s)</p>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
+                  onClick={() => {
+                    setFilters({ name: "", unit: "", categoryId: "" });
+                    setCurrentPage(1);
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {filteredRows.length === 0 ? (
               <div className="text-sm text-gray-600">No products found</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {rows
-                  .slice()
-                  .sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
-                  .map((row) => {
+                {pagedRows.map((row) => {
                     const category =
                       row.category_id === null || row.category_id === undefined
                         ? null
@@ -476,6 +591,47 @@ function Product() {
                   })}
               </div>
             )}
+
+            {filteredRows.length > 0 ? (
+              <div className="mt-4 flex items-center justify-between px-1 py-2 text-gray-700">
+                <div className="text-sm">
+                  Page {currentPage} / {totalPages}
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm">Cards</label>
+                  <select
+                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                    value={String(pageSize)}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="6">6</option>
+                    <option value="9">9</option>
+                    <option value="12">12</option>
+                    <option value="18">18</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </div>
