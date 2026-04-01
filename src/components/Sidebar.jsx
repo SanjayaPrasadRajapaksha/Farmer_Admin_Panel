@@ -10,57 +10,96 @@ import {
 import { NavLink } from "react-router-dom";
 
 function Sidebar() {
-    return (
-        <div className="w-64 shrink-0 h-full overflow-visible border-r-2 hidden md:block bg-white">
-            <div className="flex flex-col gap-4 pt-6 pl-[20%] text-[15px]">
+  const linkClass =
+    "flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-200 text-base";
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/dashboard">
-                    <FaTachometerAlt className="w-5 h-5" />
-                    <p className="hidden md:block">Dashboard</p>
-                </NavLink>
+  const activeClass =
+    "bg-gradient-to-r from-green-400 to-blue-500 text-white shadow-md";
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/market">
-                    <FaStore className="w-5 h-5" />
-                    <p className="hidden md:block">Market Price</p>
-                </NavLink>
+  const inactiveClass =
+    "text-gray-700 hover:bg-gray-100 hover:text-green-600";
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/report">
-                    <FaChartBar className="w-5 h-5" />
-                    <p className="hidden md:block">Report & Analytics</p>
-                </NavLink>
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/chart">
-                    <FaComments className="w-5 h-5" />
-                    <p className="hidden md:block">Chart </p>
-                </NavLink>
+  const iconClass = "w-6 h-6"; // 🔥 bigger icons
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/product">
-                    <FaComments className="w-5 h-5" />
-                    <p className="hidden md:block">Product </p>
-                </NavLink>
+  return (
+    <div className="w-72 h-full overflow-y-auto overflow-x-hidden border-r bg-white shadow-sm hidden md:block">
+      <div className="flex flex-col gap-4 p-6">
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/customer">
-                    <FaUsers className="w-5 h-5" />
-                    <p className="hidden md:block">Customers</p>
-                </NavLink>
+        <NavLink to="/dashboard"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaTachometerAlt className={iconClass} />
+          <span className="font-medium">Dashboard</span>
+        </NavLink>
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/feedback">
-                    <FaComments className="w-5 h-5" />
-                    <p className="hidden md:block">Feedback </p>
-                </NavLink>
+        <NavLink to="/market"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaStore className={iconClass} />
+          <span className="font-medium">Market Price</span>
+        </NavLink>
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/faq">
-                    <FaQuestionCircle className="w-5 h-5" />
-                    <p className="hidden md:block">FAQ </p>
-                </NavLink>
+        <NavLink to="/report"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaChartBar className={iconClass} />
+          <span className="font-medium">Report & Analytics</span>
+        </NavLink>
 
-                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/setting">
-                    <FaCog className="w-5 h-5" />
-                    <p className="hidden md:block">Settings</p>
-                </NavLink>
+        <NavLink to="/chart"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaComments className={iconClass} />
+          <span className="font-medium">Chart</span>
+        </NavLink>
 
-            </div>
-        </div>
-    );
+        <NavLink to="/product"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaComments className={iconClass} />
+          <span className="font-medium">Product</span>
+        </NavLink>
+
+        <NavLink to="/customer"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaUsers className={iconClass} />
+          <span className="font-medium">Customers</span>
+        </NavLink>
+
+        <NavLink to="/feedback"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaComments className={iconClass} />
+          <span className="font-medium">Feedback</span>
+        </NavLink>
+
+        <NavLink to="/faq"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaQuestionCircle className={iconClass} />
+          <span className="font-medium">FAQ</span>
+        </NavLink>
+
+        <NavLink to="/setting"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }>
+          <FaCog className={iconClass} />
+          <span className="font-medium">Settings</span>
+        </NavLink>
+
+      </div>
+    </div>
+  );
 }
 
 export default Sidebar;
