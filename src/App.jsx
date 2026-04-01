@@ -12,6 +12,7 @@ import Report from "./pages/Report"
 import Setting from "./pages/Setting"
 import Product from "./pages/Product"
 import Chart from "./pages/Chart"
+import User from "./pages/Customer"
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
 export const currency = '$'
@@ -45,6 +46,7 @@ function App() {
                   <Route path="/setting" element={<Setting />} />
                   <Route path="/product" element={<Product />} />
                   <Route path="/chart" element={<Chart />} />
+                  <Route path="/customer" element={<User token={token} />} />
                 </Routes>
 
               </div>
