@@ -25,7 +25,7 @@ function App() {
   return (
     <div className='bg-gray-50 min-h-screen flex flex-col'>
       <ToastContainer />
-      {token !== "" ? <Login setToken={setToken} /> :
+      {token === "" ? <Login setToken={setToken} /> :
         <>
           <div className="sticky top-0 z-50 bg-gray-50" style={{ height: 56 }}>
             <Navbar setToken={setToken} />

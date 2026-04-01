@@ -1,26 +1,73 @@
 import axios from "axios";
 import { useState } from "react";
-import { backendUrl } from "../App";
 import { toast } from "react-toastify";
+import { backendUrl } from "../App";
+
+
+const decodeJwtPayload = (token) => {
+    try {
+        const parts = String(token || "").split(".");
+        if (parts.length < 2) return null;
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const padLen = (4 - (base64.length % 4)) % 4;
+        const padded = base64 + "=".repeat(padLen);
+        const json = globalThis.atob ? globalThis.atob(padded) : null;
+        if (!json) return null;
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+};
 
 
 const Login = ({setToken}) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const onSubmitHandler = async (e) => {
         try {
             e.preventDefault();
-            const response = await axios.post(backendUrl + "/api/user/admin", { email, password });
-            if (response.data.success) {
-                setToken(response.data.token)
-            } else {
-                toast.error(response.data.message)
+            if (isSubmitting) return;
+            setIsSubmitting(true);
+
+            const response = await axios.post(backendUrl + "/api/user/login", { email, password });
+            const data = response?.data ?? {};
+            const ok = data?.status === true || data?.success === true;
+            const token = data?.token;
+
+            if (!ok) {
+                toast.error(data?.message || data?.error || "Login failed");
+                return;
             }
+
+            if (!token) {
+                toast.error("Login succeeded but token missing");
+                return;
+            }
+
+            // Backend JWT payload includes { role: <Role.position> }. Block non-admin logins here.
+            const payload = decodeJwtPayload(token);
+            const role = String(payload?.role ?? "").toLowerCase();
+            if (role && !role.includes("admin")) {
+                toast.error("Only admins can login to the admin panel");
+                return;
+            }
+
+            setToken(token);
         }
         catch (error) {
             console.error(error);
-            toast.error(error.response?.data?.message || "Something went wrong!");
+            toast.error(
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                error.message ||
+                "Something went wrong!"
+            );
+        }
+        finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -37,7 +84,14 @@ const Login = ({setToken}) => {
                         <p className="text-sm font-medium text-gray-700 mb-2">Password</p>
                         <input onChange={(e) => setPassword(e.target.value)} value={password} className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none" type="password" placeholder="Enter your password" required />
                     </div>
-                    <button className="mt-2 w-full py-2 px-4 rounded-md text-white bg-black" type="submit" value="Login">Login</button>
+                    <button
+                        className="mt-2 w-full py-2 px-4 rounded-md text-white bg-black disabled:opacity-60"
+                        type="submit"
+                        value="Login"
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? "Logging in..." : "Login"}
+                    </button>
                 </form>
             </div>
         </div>
