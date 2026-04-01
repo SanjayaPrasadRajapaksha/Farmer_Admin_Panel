@@ -4,7 +4,8 @@ import {
     FaComments,
     FaQuestionCircle,
     FaStore,
-    FaTachometerAlt
+    FaTachometerAlt,
+    FaUsers
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -27,10 +28,19 @@ function Sidebar() {
                     <FaChartBar className="w-5 h-5" />
                     <p className="hidden md:block">Report & Analytics</p>
                 </NavLink>
+                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/chart">
+                    <FaComments className="w-5 h-5" />
+                    <p className="hidden md:block">Chart </p>
+                </NavLink>
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/product">
                     <FaComments className="w-5 h-5" />
                     <p className="hidden md:block">Product </p>
+                </NavLink>
+
+                <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/customer">
+                    <FaUsers className="w-5 h-5" />
+                    <p className="hidden md:block">Customers</p>
                 </NavLink>
 
                 <NavLink className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-md" to="/feedback">
