@@ -39,12 +39,6 @@ function User() {
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const roleById = useMemo(() => {
-    const map = new Map();
-    for (const r of roles) map.set(String(r.id), r);
-    return map;
-  }, [roles]);
-
   const customerRole = useMemo(() => {
     for (const r of roles) {
       const pos = String(r?.position ?? "").trim().toLowerCase();
@@ -345,22 +339,22 @@ function User() {
                   <th className="text-left px-4 py-3 border-b">Name</th>
                   <th className="text-left px-4 py-3 border-b">Email</th>
                   <th className="text-left px-4 py-3 border-b">Phone</th>
+                  <th className="text-left px-4 py-3 border-b">Address</th>
                   <th className="text-left px-4 py-3 border-b">Verified</th>
                   <th className="text-left px-4 py-3 border-b">Active</th>
-                  <th className="text-left px-4 py-3 border-b">Role</th>
                   <th className="text-right px-4 py-3 border-b">Actions</th>
                 </tr>
               </thead>
 
               <tbody className="text-gray-700">
                 {pagedRows.map((u) => {
-                  const role = roleById.get(String(u?.role_id ?? ""));
                   return (
                     <tr key={u.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 border-b">{u.id}</td>
                       <td className="px-4 py-3 border-b">{u.name ?? "-"}</td>
                       <td className="px-4 py-3 border-b">{u.email ?? "-"}</td>
                       <td className="px-4 py-3 border-b">{u.phone ?? "-"}</td>
+                      <td className="px-4 py-3 border-b">{u.address ?? "-"}</td>
                       <td className="px-4 py-3 border-b">
                         <button
                           type="button"
@@ -383,7 +377,6 @@ function User() {
                           {u.isActive ? "Yes" : "No"}
                         </button>
                       </td>
-                      <td className="px-4 py-3 border-b">{role?.position ?? u.role_id ?? "-"}</td>
                       <td className="px-4 py-3 border-b">
                         <div className="flex items-center justify-end gap-3">
                           <button
