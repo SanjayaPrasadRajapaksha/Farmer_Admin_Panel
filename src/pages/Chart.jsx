@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
+import { FaSyncAlt } from "react-icons/fa";
 import { TiArrowSortedDown, TiArrowSortedUp } from "react-icons/ti";
 import { toast } from "react-toastify";
 import {
@@ -340,7 +341,7 @@ function Chart() {
 
   return (
     <div className="w-full">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">Market Price Trends</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -349,11 +350,13 @@ function Chart() {
         </div>
         <button
           type="button"
-          onClick={fetchAll}
-          className="px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 text-sm"
+          className="p-2 rounded-md border border-gray-300 bg-white disabled:opacity-60"
           disabled={loading}
+          onClick={fetchAll}
+          aria-label="Refresh market price trends"
+          title="Refresh"
         >
-          Refresh
+          <FaSyncAlt className="w-4 h-4" />
         </button>
       </div>
 
