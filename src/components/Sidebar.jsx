@@ -5,7 +5,8 @@ import {
     FaQuestionCircle,
     FaStore,
     FaTachometerAlt,
-    FaUsers
+    FaUsers,
+    FaBox 
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -55,7 +56,7 @@ function Sidebar() {
           <span className="font-medium">Report & Analytics</span>
         </NavLink>
 
-        <NavLink
+        {/* <NavLink
           to="/chart"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
@@ -63,7 +64,7 @@ function Sidebar() {
         >
           <FaComments className={iconClass} />
           <span className="font-medium">Chart</span>
-        </NavLink>
+        </NavLink> */}
 
         <NavLink
           to="/product"
@@ -71,7 +72,7 @@ function Sidebar() {
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
-          <FaComments className={iconClass} />
+          <FaBox className={iconClass} />
           <span className="font-medium">Product</span>
         </NavLink>
 
