@@ -6,7 +6,7 @@ function Navbar({ setToken }) {
       
       {/* Logo */}
       <img
-        className="w-[max(10%,80px)]"
+        className="w-[max(8%,80px)]"
         src={assets.logo}
         alt="Logo"
       />
