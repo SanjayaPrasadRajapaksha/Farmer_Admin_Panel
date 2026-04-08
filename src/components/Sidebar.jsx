@@ -95,6 +95,16 @@ function Sidebar() {
           <FaComments className={iconClass} />
           <span className="font-medium">Feedback</span>
         </NavLink>
+        
+         <NavLink
+          to="/contact"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <FaQuestionCircle className={iconClass} />
+          <span className="font-medium">Contact</span>
+        </NavLink>
 
         <NavLink
           to="/faq"
