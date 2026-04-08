@@ -7,6 +7,16 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 
+const getLocalISODate = () => {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const YYYY_MM_DD_PREFIX = /^(\d{4}-\d{2}-\d{2})/;
+
 function Report() {
   const [loading, setLoading] = useState(false);
   const [marketPrices, setMarketPrices] = useState([]);
@@ -14,7 +24,14 @@ function Report() {
   const [economicCenters, setEconomicCenters] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => getLocalISODate());
+
+  const normalizeDate = (value) => {
+    if (!value) return "";
+    const s = String(value);
+    const result = YYYY_MM_DD_PREFIX.exec(s);
+    return result ? result[1] : s;
+  };
 
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,13 +71,6 @@ function Report() {
     const y = date.getUTCFullYear();
     const m = String(date.getUTCMonth() + 1).padStart(2, "0");
     const d = String(date.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-
-  const formatLocalIsoDate = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   };
 
@@ -121,22 +131,25 @@ function Report() {
   const availableDates = useMemo(() => {
     const set = new Set();
     for (const r of marketPrices) {
-      if (r?.date) set.add(String(r.date));
+      const d = normalizeDate(r?.date);
+      if (d) set.add(d);
     }
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => String(a).localeCompare(String(b)));
   }, [marketPrices]);
 
   const availableDatesSet = useMemo(() => new Set(availableDates), [availableDates]);
 
   useEffect(() => {
+    // Keep selection as today by default; if it's empty (should be rare), fall back to
+    // today if available, otherwise pick the latest available date.
     if (selectedDate) return;
     if (availableDates.length === 0) return;
-    const todayIso = formatLocalIsoDate(new Date());
+    const todayIso = getLocalISODate();
     if (availableDatesSet.has(todayIso)) {
       setSelectedDate(todayIso);
       return;
     }
-    setSelectedDate(availableDates[availableDates.length - 1]);
+    setSelectedDate(availableDates.at(-1));
   }, [availableDates, availableDatesSet, selectedDate]);
 
   const priceIndex = useMemo(() => {
@@ -144,7 +157,7 @@ function Report() {
     for (const r of marketPrices) {
       const productId = r?.product_id;
       const centerId = r?.economic_center_location_id;
-      const date = r?.date;
+      const date = normalizeDate(r?.date);
       if (productId === null || productId === undefined) continue;
       if (centerId === null || centerId === undefined) continue;
       if (!date) continue;
@@ -188,7 +201,8 @@ function Report() {
     const productIds = new Set();
 
     for (const r of marketPrices) {
-      if (!r?.date || String(r.date) !== String(selectedDate)) continue;
+      const rDate = normalizeDate(r?.date);
+      if (!rDate || String(rDate) !== String(selectedDate)) continue;
       const centerId = r?.economic_center_location_id;
       if (centerId !== dambullaCenterId && centerId !== tambuttegamaCenterId) continue;
       if (r.product_id !== null && r.product_id !== undefined) productIds.add(String(r.product_id));
@@ -466,7 +480,7 @@ function Report() {
         <h2 className="text-xl font-semibold text-gray-700">Market Price Comparison</h2>
         <button
           type="button"
-          className="px-3 py-2 rounded-md bg-black text-white text-sm disabled:opacity-60"
+          className="px-3 py-2 rounded-md bg-yellow-400 text-black text-sm disabled:opacity-60"
           disabled={loading || missingCenters || filteredTableRows.length === 0}
           onClick={onDownloadPdf}
         >
@@ -495,7 +509,7 @@ function Report() {
                 setSelectedDate(e.target.value);
                 setCurrentPage(1);
               }}
-              max={availableDates.length ? availableDates[availableDates.length - 1] : undefined}
+              max={getLocalISODate()}
             />
           </div>
 
@@ -552,6 +566,7 @@ function Report() {
             className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
             onClick={() => {
               setFilters({ productName: "", categoryId: "" });
+              setSelectedDate(getLocalISODate());
               setCurrentPage(1);
             }}
           >

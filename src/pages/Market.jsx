@@ -6,6 +6,7 @@ import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 function Market() {
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -13,7 +14,7 @@ function Market() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [filters, setFilters] = useState({
-    date: "",
+    date: todayISO,
     productId: "",
     priceTypeId: "",
     economicCenterId: "",
@@ -544,7 +545,7 @@ function Market() {
             <button
               type="submit"
               disabled={isUploading}
-              className="w-full md:w-auto px-5 py-2 rounded-md text-white bg-black disabled:opacity-60"
+              className="w-full md:w-auto px-5 py-2 rounded-md text-black bg-yellow-400 disabled:opacity-60"
             >
               {isUploading ? "Uploading..." : "Upload PDF"}
             </button>
@@ -655,7 +656,7 @@ function Market() {
                   type="button"
                   className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
                   onClick={() => {
-                    setFilters({ date: "", productId: "", priceTypeId: "", economicCenterId: "", verified: "" });
+                    setFilters({ date: todayISO, productId: "", priceTypeId: "", economicCenterId: "", verified: "" });
                     setCurrentPage(1);
                   }}
                 >

@@ -6,7 +6,8 @@ import {
     FaStore,
     FaTachometerAlt,
     FaUsers,
-    FaBox 
+    FaBox,
+    FaEnvelope 
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -102,7 +103,7 @@ function Sidebar() {
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
-          <FaQuestionCircle className={iconClass} />
+          <FaEnvelope  className={iconClass} />
           <span className="font-medium">Contact</span>
         </NavLink>
 
