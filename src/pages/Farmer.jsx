@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { FaEdit, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
+import { FaEye, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -26,18 +26,10 @@ function User() {
   const [filters, setFilters] = useState({
     q: "",
     verified: "",
-    active: "",
   });
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editRowId, setEditRowId] = useState(null);
-  const [editPayload, setEditPayload] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-  });
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewRow, setViewRow] = useState(null);
 
   const customerRole = useMemo(() => {
     for (const r of roles) {
@@ -110,7 +102,6 @@ function User() {
   const filteredRows = useMemo(() => {
     const q = String(filters.q || "").trim().toLowerCase();
     const verifiedNeedle = toBoolFilter(filters.verified);
-    const activeNeedle = toBoolFilter(filters.active);
 
     return sortedRows.filter((u) => {
       if (q) {
@@ -120,9 +111,6 @@ function User() {
 
       if (verifiedNeedle !== null) {
         if (Boolean(u?.isVerified) !== verifiedNeedle) return false;
-      }
-      if (activeNeedle !== null) {
-        if (Boolean(u?.isActive) !== activeNeedle) return false;
       }
       return true;
     });
@@ -143,50 +131,6 @@ function User() {
     return filteredRows.slice(start, start + size);
   }, [currentPage, filteredRows, pageSize]);
 
-  const openUpdatePopup = (row) => {
-    setEditRowId(row.id);
-    setEditPayload({
-      name: row?.name ?? "",
-      email: row?.email ?? "",
-      phone: row?.phone ?? "",
-      address: row?.address ?? "",
-    });
-    setIsEditOpen(true);
-  };
-
-  const closeUpdatePopup = () => {
-    if (isUpdating) return;
-    setIsEditOpen(false);
-    setEditRowId(null);
-  };
-
-  const submitUpdate = async () => {
-    if (!editRowId) return;
-    if (String(editPayload.email || "").trim() === "") {
-      toast.error("Email is required");
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      await axios.put(backendUrl + `/api/user/updateUserById/${editRowId}`, {
-        name: editPayload.name,
-        email: editPayload.email,
-        phone: editPayload.phone,
-        address: editPayload.address,
-      });
-      toast.success("Customer updated");
-      setIsEditOpen(false);
-      setEditRowId(null);
-      setRefreshKey((k) => k + 1);
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || error.message || "Update failed");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const toggleVerify = async (row) => {
     try {
       await axios.put(backendUrl + `/api/user/verifyUserById/${row.id}`, {
@@ -199,16 +143,14 @@ function User() {
     }
   };
 
-  const toggleActive = async (row) => {
-    try {
-      await axios.put(backendUrl + `/api/user/activateUserById/${row.id}`, {
-        status: !Boolean(row?.isActive),
-      });
-      setRefreshKey((k) => k + 1);
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || error.message || "Activation update failed");
-    }
+  const openViewPopup = (row) => {
+    setViewRow(row ?? null);
+    setIsViewOpen(true);
+  };
+
+  const closeViewPopup = () => {
+    setIsViewOpen(false);
+    setViewRow(null);
   };
 
   const onDelete = async (row) => {
@@ -231,9 +173,7 @@ function User() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage farmers (view, verify/activate, edit, delete).
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Manage farmers (view, verify, delete).</p>
         </div>
 
         <button
@@ -252,7 +192,7 @@ function User() {
       </div>
 
       <div className="mt-5 bg-white border border-gray-200 rounded-md p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-gray-500">Search</div>
             <input
@@ -283,23 +223,6 @@ function User() {
               <option value="false">Not verified</option>
             </select>
           </div>
-
-          <div>
-            <div className="text-xs text-gray-500">Active</div>
-            <select
-              className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-white"
-              value={filters.active}
-              onChange={(e) => {
-                setFilters((f) => ({ ...f, active: e.target.value }));
-                setCurrentPage(1);
-              }}
-              disabled={loading}
-            >
-              <option value="">All</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -323,7 +246,7 @@ function User() {
                   type="button"
                   className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
                   onClick={() => {
-                    setFilters({ q: "", verified: "", active: "" });
+                    setFilters({ q: "", verified: "" });
                     setCurrentPage(1);
                   }}
                 >
@@ -341,7 +264,6 @@ function User() {
                   <th className="text-left px-4 py-3 border-b">Phone</th>
                   <th className="text-left px-4 py-3 border-b">Address</th>
                   <th className="text-left px-4 py-3 border-b">Verified</th>
-                  <th className="text-left px-4 py-3 border-b">Active</th>
                   <th className="text-right px-4 py-3 border-b">Actions</th>
                 </tr>
               </thead>
@@ -367,26 +289,15 @@ function User() {
                         </button>
                       </td>
                       <td className="px-4 py-3 border-b">
-                        <button
-                          type="button"
-                          onClick={() => toggleActive(u)}
-                          className={`px-2 py-1 rounded-md border ${
-                            u.isActive ? "bg-black text-white" : "bg-white"
-                          }`}
-                        >
-                          {u.isActive ? "Yes" : "No"}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 border-b">
                         <div className="flex items-center justify-end gap-3">
                           <button
                             type="button"
-                            onClick={() => openUpdatePopup(u)}
+                            onClick={() => openViewPopup(u)}
                             className="p-2 rounded-md border border-gray-300 bg-white"
-                            aria-label="Update"
-                            title="Update"
+                            aria-label="View"
+                            title="View"
                           >
-                            <FaEdit className="w-4 h-4" />
+                            <FaEye className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
@@ -405,7 +316,7 @@ function User() {
 
                 {pagedRows.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-4" colSpan={8}>
+                    <td className="px-4 py-4" colSpan={7}>
                       No customers match your filters
                     </td>
                   </tr>
@@ -455,16 +366,15 @@ function User() {
         </>
       )}
 
-      {isEditOpen ? (
+      {isViewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="w-full max-w-lg bg-white rounded-md shadow-lg border border-gray-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-800">Edit customer</h3>
+              <h3 className="text-base font-semibold text-gray-800">View customer</h3>
               <button
                 type="button"
-                onClick={closeUpdatePopup}
+                onClick={closeViewPopup}
                 className="p-2 rounded-md border border-gray-300 hover:bg-gray-50"
-                disabled={isUpdating}
                 aria-label="Close"
               >
                 <FaTimes />
@@ -474,59 +384,37 @@ function User() {
             <div className="px-5 py-4 grid grid-cols-1 gap-3">
               <div>
                 <div className="text-xs text-gray-500">Name</div>
-                <input
-                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
-                  value={editPayload.name}
-                  onChange={(e) => setEditPayload((p) => ({ ...p, name: e.target.value }))}
-                  disabled={isUpdating}
-                />
+                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
+                  {viewRow?.name ?? "-"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Email</div>
-                <input
-                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
-                  value={editPayload.email}
-                  onChange={(e) => setEditPayload((p) => ({ ...p, email: e.target.value }))}
-                  disabled={isUpdating}
-                />
+                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
+                  {viewRow?.email ?? "-"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Phone</div>
-                <input
-                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
-                  value={editPayload.phone}
-                  onChange={(e) => setEditPayload((p) => ({ ...p, phone: e.target.value }))}
-                  disabled={isUpdating}
-                />
+                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
+                  {viewRow?.phone ?? "-"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Address</div>
-                <textarea
-                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
-                  rows={3}
-                  value={editPayload.address}
-                  onChange={(e) => setEditPayload((p) => ({ ...p, address: e.target.value }))}
-                  disabled={isUpdating}
-                />
+                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800 whitespace-pre-wrap min-h-[72px]">
+                  {viewRow?.address ?? "-"}
+                </div>
               </div>
             </div>
 
             <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={closeUpdatePopup}
+                onClick={closeViewPopup}
                 className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 text-sm"
-                disabled={isUpdating}
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={submitUpdate}
-                className="px-4 py-2 border border-black rounded-md bg-black text-white hover:bg-gray-900 text-sm"
-                disabled={isUpdating}
-              >
-                {isUpdating ? "Saving..." : "Save"}
+                Close
               </button>
             </div>
           </div>
