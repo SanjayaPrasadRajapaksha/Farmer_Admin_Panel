@@ -78,13 +78,13 @@ function Sidebar() {
         </NavLink>
 
         <NavLink
-          to="/customer"
+          to="/farmer"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
           <FaUsers className={iconClass} />
-          <span className="font-medium">Customers</span>
+          <span className="font-medium">Farmer</span>
         </NavLink>
 
         <NavLink

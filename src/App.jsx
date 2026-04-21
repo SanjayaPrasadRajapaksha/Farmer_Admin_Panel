@@ -5,7 +5,7 @@ import Login from "./components/Login"
 import Navbar from "./components/Navbar"
 import Sidebar from "./components/sidebar"
 import Chart from "./pages/Chart"
-import User from "./pages/Customer"
+import Farmer from "./pages/Farmer"
 import Dashboard from "./pages/Dashboard"
 import FAQ from "./pages/FAQ"
 import Feedback from "./pages/Feedback"
@@ -47,7 +47,7 @@ function App() {
                   <Route path="/setting" element={<Setting />} />
                   <Route path="/product" element={<Product />} />
                   <Route path="/chart" element={<Chart />} />
-                  <Route path="/customer" element={<User token={token} />} />
+                  <Route path="/farmer" element={<Farmer token={token} />} />
                   <Route path="/contact" element={<Contact token={token} />} />
                 </Routes>
 

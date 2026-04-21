@@ -224,7 +224,7 @@ function User() {
     }
   };
 
-  const title = "Customer Management";
+  const title = "Farmers Management";
 
   return (
     <div className="w-full">
@@ -232,7 +232,7 @@ function User() {
         <div>
           <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Manage customers only (view, verify/activate, edit, delete).
+            Manage farmers (view, verify/activate, edit, delete).
           </p>
         </div>
 
