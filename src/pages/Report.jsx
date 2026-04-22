@@ -178,7 +178,8 @@ function Report() {
   };
 
   const compute7DayPrediction = (productId, centerId, dateStr) => {
-    // Predict "tomorrow" using a 7-day average including the selected date.
+    // Predict tomorrow price as a simple moving average of the last 7 days
+    // (selected date + previous 6 days) for the same product and center.
     if (!productId || !centerId || !dateStr) return null;
 
     let sum = 0;
@@ -186,7 +187,7 @@ function Report() {
       const d = addDays(dateStr, -i);
       if (!d) return null;
       const p = getPrice(productId, centerId, d);
-      if (p === null) return null; // require full 7 days
+      if (p === null) return null; // Require all 7 daily points for prediction.
       sum += p;
     }
     return sum / 7;
@@ -334,6 +335,7 @@ function Report() {
   };
 
   const getHigherTodaySide = (dToday, tToday) => {
+    // Used for up/down indicators: returns which center has the higher value today.
     const dNum = toFiniteNumberOrNull(dToday);
     const tNum = toFiniteNumberOrNull(tToday);
     if (dNum === null || tNum === null) return null;
@@ -342,6 +344,7 @@ function Report() {
   };
 
   const getHigherPredictedSide = (dPred, tPred) => {
+    // Same comparison for predicted prices (tomorrow).
     const dNum = toFiniteNumberOrNull(dPred);
     const tNum = toFiniteNumberOrNull(tPred);
     if (dNum === null || tNum === null) return null;
@@ -357,11 +360,14 @@ function Report() {
   };
 
   const getDifferenceByMode = (dValue, tValue) => {
+    // Difference direction toggle:
+    // D-T => Dambulla - Tambuttegama, T-D => Tambuttegama - Dambulla.
     if (differenceMode === "T_MINUS_D") return getDiffDT(tValue, dValue);
     return getDiffDT(dValue, tValue);
   };
 
   const getPredDifferenceByMode = (dValue, tValue) => {
+    // Predicted difference direction uses the same D-T / T-D rule.
     if (predDifferenceMode === "T_MINUS_D") return getDiffDT(tValue, dValue);
     return getDiffDT(dValue, tValue);
   };
@@ -371,6 +377,8 @@ function Report() {
   };
 
   const onDownloadPdf = () => {
+    // Build an export of the currently filtered table, keeping the same
+    // difference direction (D-T or T-D) and predicted values shown in UI.
     if (loading) return;
     if (missingCenters) {
       toast.error("Economic centers not found for Dambulla / Tambuttegama");
@@ -420,6 +428,7 @@ function Report() {
       };
 
       const pdfSignedDiffCell = (diff) => {
+        // Positive diff is green (+), negative diff is red (-), zero is neutral.
         const num = toFiniteNumberOrNull(diff);
         if (num === null) return "-";
         const absText = formatPrice(Math.abs(num));
@@ -465,6 +474,7 @@ function Report() {
       });
 
       const safeDate = String(selectedDate || "").trim() || "date";
+      // Save PDF with selected date in filename for easier tracking.
       doc.save(`market-price-report_${safeDate}.pdf`);
     } catch (err) {
       console.error(err);
