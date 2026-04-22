@@ -6,7 +6,8 @@ import {
     FaStore,
     FaTachometerAlt,
     FaUsers,
-    FaBox 
+    FaBox,
+    FaEnvelope 
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -77,13 +78,13 @@ function Sidebar() {
         </NavLink>
 
         <NavLink
-          to="/customer"
+          to="/farmer"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
           <FaUsers className={iconClass} />
-          <span className="font-medium">Customers</span>
+          <span className="font-medium">Farmer</span>
         </NavLink>
 
         <NavLink
@@ -94,6 +95,16 @@ function Sidebar() {
         >
           <FaComments className={iconClass} />
           <span className="font-medium">Feedback</span>
+        </NavLink>
+        
+         <NavLink
+          to="/contact"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <FaEnvelope  className={iconClass} />
+          <span className="font-medium">Contact</span>
         </NavLink>
 
         <NavLink

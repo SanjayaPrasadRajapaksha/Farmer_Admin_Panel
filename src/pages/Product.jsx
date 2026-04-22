@@ -419,7 +419,7 @@ function Product() {
             <button
               type="submit"
               disabled={isCreating}
-              className="w-full md:w-auto px-5 py-2 rounded-md text-white bg-black disabled:opacity-60"
+              className="w-full md:w-auto px-5 py-2 rounded-md text-black bg-yellow-400 disabled:opacity-60"
             >
               {isCreating ? "Saving..." : "Add Product"}
             </button>

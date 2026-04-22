@@ -12,6 +12,26 @@ select,input,textarea{
     outline-color: #c586a5;
     border-radius: 4px;
 }
+
+/* Cursor styles for interactive elements */
+:where(
+    button,
+    a,
+    select,
+    summary,
+    [role="button"],
+    input[type="checkbox"],
+    input[type="radio"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+) {
+    cursor: pointer;
+}
+
+:where(button:disabled, select:disabled, input:disabled, textarea:disabled, [role="button"][aria-disabled="true"], a[aria-disabled="true"]) {
+    cursor: not-allowed;
+}
 .active {
    background-color: #ecfdf5;
    border-color: #c586a5;

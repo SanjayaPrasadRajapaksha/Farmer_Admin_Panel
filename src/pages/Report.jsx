@@ -7,6 +7,16 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 
+const getLocalISODate = () => {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const YYYY_MM_DD_PREFIX = /^(\d{4}-\d{2}-\d{2})/;
+
 function Report() {
   const [loading, setLoading] = useState(false);
   const [marketPrices, setMarketPrices] = useState([]);
@@ -14,7 +24,14 @@ function Report() {
   const [economicCenters, setEconomicCenters] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => getLocalISODate());
+
+  const normalizeDate = (value) => {
+    if (!value) return "";
+    const s = String(value);
+    const result = YYYY_MM_DD_PREFIX.exec(s);
+    return result ? result[1] : s;
+  };
 
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,13 +71,6 @@ function Report() {
     const y = date.getUTCFullYear();
     const m = String(date.getUTCMonth() + 1).padStart(2, "0");
     const d = String(date.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-
-  const formatLocalIsoDate = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   };
 
@@ -121,22 +131,25 @@ function Report() {
   const availableDates = useMemo(() => {
     const set = new Set();
     for (const r of marketPrices) {
-      if (r?.date) set.add(String(r.date));
+      const d = normalizeDate(r?.date);
+      if (d) set.add(d);
     }
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => String(a).localeCompare(String(b)));
   }, [marketPrices]);
 
   const availableDatesSet = useMemo(() => new Set(availableDates), [availableDates]);
 
   useEffect(() => {
+    // Keep selection as today by default; if it's empty (should be rare), fall back to
+    // today if available, otherwise pick the latest available date.
     if (selectedDate) return;
     if (availableDates.length === 0) return;
-    const todayIso = formatLocalIsoDate(new Date());
+    const todayIso = getLocalISODate();
     if (availableDatesSet.has(todayIso)) {
       setSelectedDate(todayIso);
       return;
     }
-    setSelectedDate(availableDates[availableDates.length - 1]);
+    setSelectedDate(availableDates.at(-1));
   }, [availableDates, availableDatesSet, selectedDate]);
 
   const priceIndex = useMemo(() => {
@@ -144,7 +157,7 @@ function Report() {
     for (const r of marketPrices) {
       const productId = r?.product_id;
       const centerId = r?.economic_center_location_id;
-      const date = r?.date;
+      const date = normalizeDate(r?.date);
       if (productId === null || productId === undefined) continue;
       if (centerId === null || centerId === undefined) continue;
       if (!date) continue;
@@ -165,7 +178,8 @@ function Report() {
   };
 
   const compute7DayPrediction = (productId, centerId, dateStr) => {
-    // Predict "tomorrow" using a 7-day average including the selected date.
+    // Predict tomorrow price as a simple moving average of the last 7 days
+    // (selected date + previous 6 days) for the same product and center.
     if (!productId || !centerId || !dateStr) return null;
 
     let sum = 0;
@@ -173,7 +187,7 @@ function Report() {
       const d = addDays(dateStr, -i);
       if (!d) return null;
       const p = getPrice(productId, centerId, d);
-      if (p === null) return null; // require full 7 days
+      if (p === null) return null; // Require all 7 daily points for prediction.
       sum += p;
     }
     return sum / 7;
@@ -188,7 +202,8 @@ function Report() {
     const productIds = new Set();
 
     for (const r of marketPrices) {
-      if (!r?.date || String(r.date) !== String(selectedDate)) continue;
+      const rDate = normalizeDate(r?.date);
+      if (!rDate || String(rDate) !== String(selectedDate)) continue;
       const centerId = r?.economic_center_location_id;
       if (centerId !== dambullaCenterId && centerId !== tambuttegamaCenterId) continue;
       if (r.product_id !== null && r.product_id !== undefined) productIds.add(String(r.product_id));
@@ -320,6 +335,7 @@ function Report() {
   };
 
   const getHigherTodaySide = (dToday, tToday) => {
+    // Used for up/down indicators: returns which center has the higher value today.
     const dNum = toFiniteNumberOrNull(dToday);
     const tNum = toFiniteNumberOrNull(tToday);
     if (dNum === null || tNum === null) return null;
@@ -328,6 +344,7 @@ function Report() {
   };
 
   const getHigherPredictedSide = (dPred, tPred) => {
+    // Same comparison for predicted prices (tomorrow).
     const dNum = toFiniteNumberOrNull(dPred);
     const tNum = toFiniteNumberOrNull(tPred);
     if (dNum === null || tNum === null) return null;
@@ -343,11 +360,14 @@ function Report() {
   };
 
   const getDifferenceByMode = (dValue, tValue) => {
+    // Difference direction toggle:
+    // D-T => Dambulla - Tambuttegama, T-D => Tambuttegama - Dambulla.
     if (differenceMode === "T_MINUS_D") return getDiffDT(tValue, dValue);
     return getDiffDT(dValue, tValue);
   };
 
   const getPredDifferenceByMode = (dValue, tValue) => {
+    // Predicted difference direction uses the same D-T / T-D rule.
     if (predDifferenceMode === "T_MINUS_D") return getDiffDT(tValue, dValue);
     return getDiffDT(dValue, tValue);
   };
@@ -357,6 +377,8 @@ function Report() {
   };
 
   const onDownloadPdf = () => {
+    // Build an export of the currently filtered table, keeping the same
+    // difference direction (D-T or T-D) and predicted values shown in UI.
     if (loading) return;
     if (missingCenters) {
       toast.error("Economic centers not found for Dambulla / Tambuttegama");
@@ -406,6 +428,7 @@ function Report() {
       };
 
       const pdfSignedDiffCell = (diff) => {
+        // Positive diff is green (+), negative diff is red (-), zero is neutral.
         const num = toFiniteNumberOrNull(diff);
         if (num === null) return "-";
         const absText = formatPrice(Math.abs(num));
@@ -451,6 +474,7 @@ function Report() {
       });
 
       const safeDate = String(selectedDate || "").trim() || "date";
+      // Save PDF with selected date in filename for easier tracking.
       doc.save(`market-price-report_${safeDate}.pdf`);
     } catch (err) {
       console.error(err);
@@ -466,7 +490,7 @@ function Report() {
         <h2 className="text-xl font-semibold text-gray-700">Market Price Comparison</h2>
         <button
           type="button"
-          className="px-3 py-2 rounded-md bg-black text-white text-sm disabled:opacity-60"
+          className="px-3 py-2 rounded-md bg-yellow-400 text-black text-sm disabled:opacity-60"
           disabled={loading || missingCenters || filteredTableRows.length === 0}
           onClick={onDownloadPdf}
         >
@@ -495,7 +519,7 @@ function Report() {
                 setSelectedDate(e.target.value);
                 setCurrentPage(1);
               }}
-              max={availableDates.length ? availableDates[availableDates.length - 1] : undefined}
+              max={getLocalISODate()}
             />
           </div>
 
@@ -552,6 +576,7 @@ function Report() {
             className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
             onClick={() => {
               setFilters({ productName: "", categoryId: "" });
+              setSelectedDate(getLocalISODate());
               setCurrentPage(1);
             }}
           >
