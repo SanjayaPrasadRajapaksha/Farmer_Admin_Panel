@@ -6,6 +6,7 @@ import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
+import { highlightMatchedText } from "../utils/highlightMatch";
 
 const formatDateTime = (value) => {
   if (!value) return "";
@@ -262,14 +263,14 @@ function Feedback() {
                 <tr key={row?.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 border-b">{row?.id ?? "-"}</td>
                   <td className="px-4 py-3 border-b max-w-[200px] truncate" title={row?.name ?? ""}>
-                    {row?.name ?? "-"}
+                    {highlightMatchedText(row?.name ?? "-", filters.q)}
                   </td>
-                  <td className="px-4 py-3 border-b">{row?.rate ?? "-"}</td>
+                  <td className="px-4 py-3 border-b">{highlightMatchedText(String(row?.rate ?? "-"), filters.q)}</td>
                   <td
                     className="px-4 py-3 border-b max-w-[360px] truncate"
                     title={String(row?.message ?? "")}
                   >
-                    {row?.message ?? "-"}
+                    {highlightMatchedText(row?.message ?? "-", filters.q)}
                   </td>
                   <td className="px-4 py-3 border-b">
                     <button

@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
+import { highlightMatchedText } from "../utils/highlightMatch";
 
 function Market() {
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -437,7 +438,7 @@ function Market() {
             <td className="px-4 py-3 border-b">{row.id}</td>
             <td className="px-4 py-3 border-b">{formatDate(row.date)}</td>
             <td className="px-4 py-3 border-b">{row.price}</td>
-            <td className="px-4 py-3 border-b">{product?.name ?? product?.title ?? row.product_id ?? ""}</td>
+            <td className="px-4 py-3 border-b">{highlightMatchedText(product?.name ?? product?.title ?? String(row.product_id ?? ""), filters.searchQuery)}</td>
             <td className="px-4 py-3 border-b">{priceType?.name ?? priceType?.type ?? row.price_type_id ?? ""}</td>
             <td className="px-4 py-3 border-b">{econ?.name ?? econ?.location ?? row.economic_center_location_id ?? ""}</td>
             <td className="px-4 py-3 border-b">

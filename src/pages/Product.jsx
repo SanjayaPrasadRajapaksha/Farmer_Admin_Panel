@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
+import { highlightMatchedText } from "../utils/highlightMatch";
 
 function Product() {
   const [rows, setRows] = useState([]);
@@ -534,7 +535,7 @@ function Product() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="text-sm text-gray-500">#{row.id}</div>
-                              <div className="font-semibold text-gray-800 truncate">{row.name}</div>
+                              <div className="font-semibold text-gray-800 truncate">{highlightMatchedText(row.name ?? "", filters.name)}</div>
                             </div>
                           </div>
 

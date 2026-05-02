@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
+import { highlightMatchedText } from "../utils/highlightMatch";
 
 const toBoolFilter = (value) => {
   if (value === "true") return true;
@@ -276,9 +277,9 @@ function User() {
                   return (
                     <tr key={u.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 border-b">{u.id}</td>
-                      <td className="px-4 py-3 border-b">{u.name ?? "-"}</td>
-                      <td className="px-4 py-3 border-b">{u.email ?? "-"}</td>
-                      <td className="px-4 py-3 border-b">{u.phone ?? "-"}</td>
+                      <td className="px-4 py-3 border-b">{highlightMatchedText(u.name ?? "-", filters.q)}</td>
+                      <td className="px-4 py-3 border-b">{highlightMatchedText(u.email ?? "-", filters.q)}</td>
+                      <td className="px-4 py-3 border-b">{highlightMatchedText(u.phone ?? "-", filters.q)}</td>
                       <td className="px-4 py-3 border-b">{u.address ?? "-"}</td>
                       <td className="px-4 py-3 border-b">
                         <button
@@ -387,20 +388,20 @@ function User() {
             <div className="px-5 py-4 grid grid-cols-1 gap-3">
               <div>
                 <div className="text-xs text-gray-500">Name</div>
-                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
-                  {viewRow?.name ?? "-"}
+                  <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
+                  {highlightMatchedText(viewRow?.name ?? "-", filters.q)}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Email</div>
-                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
-                  {viewRow?.email ?? "-"}
+                  <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
+                  {highlightMatchedText(viewRow?.email ?? "-", filters.q)}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Phone</div>
-                <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
-                  {viewRow?.phone ?? "-"}
+                  <div className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800">
+                  {highlightMatchedText(viewRow?.phone ?? "-", filters.q)}
                 </div>
               </div>
               <div>

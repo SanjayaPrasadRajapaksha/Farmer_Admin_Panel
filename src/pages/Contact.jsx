@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
+import { highlightMatchedText } from "../utils/highlightMatch";
 
 const formatDateTime = (value) => {
   if (!value) return "";
@@ -255,17 +256,17 @@ function Contact() {
                   <tr key={row?.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3">{row?.id ?? ""}</td>
                     <td className="px-4 py-3 max-w-[180px] truncate" title={row?.name ?? ""}>
-                      {row?.name ?? ""}
+                      {highlightMatchedText(row?.name ?? "", filters.q)}
                     </td>
                     <td className="px-4 py-3 max-w-[220px] truncate" title={row?.email ?? ""}>
-                      {row?.email ?? ""}
+                      {highlightMatchedText(row?.email ?? "", filters.q)}
                     </td>
-                    <td className="px-4 py-3">{row?.phoneNumber ?? ""}</td>
+                    <td className="px-4 py-3">{highlightMatchedText(row?.phoneNumber ?? "", filters.q)}</td>
                     <td
                       className="px-4 py-3 max-w-[260px] truncate"
                       title={String(row?.message ?? "")}
                     >
-                      {row?.message ?? ""}
+                      {highlightMatchedText(row?.message ?? "", filters.q)}
                     </td>
                     <td className="px-4 py-3">{formatDateTime(row?.createdAt)}</td>
                     <td className="px-4 py-3">
