@@ -487,7 +487,7 @@ function Report() {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-700">Market Price Comparison</h2>
+        <h2 className="text-xl font-semibold text-gray-700">Report & Analysis</h2>
         <button
           type="button"
           className="px-3 py-2 rounded-md bg-yellow-400 text-black text-sm disabled:opacity-60"

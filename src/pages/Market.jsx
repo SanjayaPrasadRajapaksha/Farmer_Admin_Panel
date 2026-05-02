@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { FaEdit, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
+import { FaCheckSquare, FaEdit, FaRegSquare, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -9,6 +9,11 @@ function Market() {
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Bulk actions: selectedIds tracks which market-price rows are checked across all pages.
+  // This enables page-aware selection so admins can verify or delete multiple rows at once.
+  const [selectedIds, setSelectedIds] = useState([]);
+  // bulkActionLoading prevents user interaction while a bulk operation (verify/delete) is in progress.
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,6 +98,7 @@ function Market() {
       const data = response?.data?.result ?? [];
       setRows(Array.isArray(data) ? data : []);
       setCurrentPage(1);
+      setSelectedIds([]);
     } catch (error) {
       console.error(error);
       const message =
@@ -232,6 +238,58 @@ function Market() {
     }
   };
 
+  // toggleRowSelection: Add or remove a single row ID from the selection.
+  // Normalized to string for consistent comparison across the app.
+  const toggleRowSelection = (rowId) => {
+    const normalizedId = String(rowId);
+    setSelectedIds((current) =>
+      current.includes(normalizedId)
+        ? current.filter((id) => id !== normalizedId)
+        : [...current, normalizedId]
+    );
+  };
+
+  // runBulkAction: Shared handler for all bulk operations (verify/delete).
+  // Validates that at least one row is selected, executes the action callback,
+  // clears selection, and refreshes the table. Handles loading state and errors.
+  const runBulkAction = async (action) => {
+    if (selectedIds.length === 0) {
+      toast.error("Please select at least one market price");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      await action(selectedIds);
+      setSelectedIds([]);
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Bulk action failed");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // bulkVerifySelected: Bulk-verify multiple rows. Calls the backend /verifyMany endpoint
+  // with the selected IDs and verify flag (true = verify, false = unverify).
+  const bulkVerifySelected = async (verify) => {
+    await runBulkAction((ids) =>
+      axios.put(backendUrl + "/api/market_price/verifyMany", { ids, verify })
+    );
+  };
+
+  // bulkDeleteSelected: Bulk-delete multiple rows with a confirmation dialog.
+  // Shows the count of selected rows to delete before calling the backend /deleteMany endpoint.
+  const bulkDeleteSelected = async () => {
+    const ok = globalThis.confirm(`Delete ${selectedIds.length} selected market price(s)?`);
+    if (!ok) return;
+
+    await runBulkAction((ids) =>
+      axios.post(backendUrl + "/api/market_price/deleteMany", { ids })
+    );
+  };
+
   const formatDate = (value) => {
     if (!value) return "";
     // backend stores date as string; show as-is
@@ -288,6 +346,40 @@ function Market() {
     return filteredRows.slice(start, start + size);
   }, [filteredRows, currentPage, pageSize]);
 
+  // Selection helpers for bulk actions:
+  // selectedSet: Fast Set lookup to check if a row ID is selected (O(1) lookup).
+  const selectedSet = useMemo(() => new Set(selectedIds.map((id) => String(id))), [selectedIds]);
+
+  // currentPageIds: IDs of all rows visible on the current page.
+  const currentPageIds = useMemo(() => pagedRows.map((row) => String(row.id)), [pagedRows]);
+
+  // isCurrentPageSelected: True if every row on the current page is selected.
+  // Used to show the "select all" checkbox as checked or indeterminate.
+  const isCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedSet.has(id));
+
+  // toggleCurrentPageSelection: Select or deselect all rows on the current page.
+  // If all are selected, deselect them; otherwise, select all and merge with existing selections from other pages.
+  const toggleCurrentPageSelection = () => {
+    setSelectedIds((current) => {
+      const selectedIdSet = new Set(current.map(String));
+      const allSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedIdSet.has(id));
+
+      if (allSelected) {
+        return current.filter((id) => !currentPageIds.includes(String(id)));
+      }
+
+      const merged = new Set(current.map(String));
+      currentPageIds.forEach((id) => merged.add(id));
+      return Array.from(merged);
+    });
+  };
+
+  // Clean up selections when table is filtered: Remove selected IDs that are no longer in the filtered result set.
+  // This prevents stale selections when filters are applied.
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => filteredRows.some((row) => String(row.id) === String(id))));
+  }, [filteredRows]);
+
   const tableBody = (() => {
     if (loading) {
       return [];
@@ -296,7 +388,7 @@ function Market() {
     if (pagedRows.length === 0) {
       return [
         <tr key="empty">
-          <td className="px-4 py-4" colSpan={8}>
+          <td className="px-4 py-4" colSpan={9}>
             No market prices found
           </td>
         </tr>,
@@ -315,6 +407,18 @@ function Market() {
 
         return (
           <tr key={row.id} className="hover:bg-gray-50">
+            {/* Row checkbox: Clicking toggles this row's selection for bulk actions. */}
+            <td className="px-4 py-3 border-b">
+              <button
+                type="button"
+                onClick={() => toggleRowSelection(row.id)}
+                className="inline-flex items-center"
+                aria-label={selectedSet.has(String(row.id)) ? `Deselect market price ${row.id}` : `Select market price ${row.id}`}
+                title={selectedSet.has(String(row.id)) ? "Deselect" : "Select"}
+              >
+                {selectedSet.has(String(row.id)) ? <FaCheckSquare /> : <FaRegSquare />}
+              </button>
+            </td>
             <td className="px-4 py-3 border-b">{row.id}</td>
             <td className="px-4 py-3 border-b">{formatDate(row.date)}</td>
             <td className="px-4 py-3 border-b">{row.price}</td>
@@ -668,6 +772,18 @@ function Market() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-gray-700">
                 <tr>
+                  {/* Header checkbox: Clicking toggles selection of all rows on the current page. */}
+                  <th className="text-left px-4 py-3 border-b">
+                    <button
+                      type="button"
+                      onClick={toggleCurrentPageSelection}
+                      className="inline-flex items-center"
+                      aria-label={isCurrentPageSelected ? "Deselect current page" : "Select current page"}
+                      title={isCurrentPageSelected ? "Deselect current page" : "Select current page"}
+                    >
+                      {isCurrentPageSelected ? <FaCheckSquare /> : <FaRegSquare />}
+                    </button>
+                  </th>
                   <th className="text-left px-4 py-3 border-b">ID</th>
                   <th className="text-left px-4 py-3 border-b">Date</th>
                   <th className="text-left px-4 py-3 border-b">Price</th>
@@ -681,6 +797,40 @@ function Market() {
 
               <tbody className="text-gray-700">{tableBody}</tbody>
             </table>
+
+            {/* Bulk actions bar: Shown when rows are selected. Allows verify, unverify, or delete operations on multiple selected rows. */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t bg-gray-50 text-gray-700">
+              <div className="text-sm">{selectedIds.length} selected</div>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {/* Verify button: Marks selected rows as verified (verify=true). */}
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                  disabled={bulkActionLoading || selectedIds.length === 0}
+                  onClick={() => bulkVerifySelected(true)}
+                >
+                  Verify selected
+                </button>
+                {/* Unverify button: Marks selected rows as unverified (verify=false). */}
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white disabled:opacity-60"
+                  disabled={bulkActionLoading || selectedIds.length === 0}
+                  onClick={() => bulkVerifySelected(false)}
+                >
+                  Unverify selected
+                </button>
+                {/* Delete button: Deletes all selected rows after confirmation. Shows count in confirmation dialog. */}
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-md border border-red-300 bg-white text-red-600 disabled:opacity-60"
+                  disabled={bulkActionLoading || selectedIds.length === 0}
+                  onClick={bulkDeleteSelected}
+                >
+                  Delete selected
+                </button>
+              </div>
+            </div>
 
             <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 text-gray-700">
               <div className="text-sm">
