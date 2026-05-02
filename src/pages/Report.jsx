@@ -180,17 +180,22 @@ function Report() {
   const compute7DayPrediction = (productId, centerId, dateStr) => {
     // Predict tomorrow price as a simple moving average of the last 7 days
     // (selected date + previous 6 days) for the same product and center.
+    // If fewer than 7 records exist, average only the available records.
     if (!productId || !centerId || !dateStr) return null;
 
     let sum = 0;
+    let count = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(dateStr, -i);
       if (!d) return null;
       const p = getPrice(productId, centerId, d);
-      if (p === null) return null; // Require all 7 daily points for prediction.
+      if (p === null) continue;
       sum += p;
+      count += 1;
     }
-    return sum / 7;
+
+    if (count === 0) return null;
+    return sum / count;
   };
 
   const tomorrowDate = useMemo(() => (selectedDate ? addDays(selectedDate, 1) : ""), [selectedDate]);

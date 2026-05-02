@@ -786,7 +786,7 @@ function Market() {
 
               {/* Fuzzy text search field for product names and prices */}
               <div className="mt-3">
-                <p className="text-xs text-gray-600 mb-1">Search (Product Name or Price)</p>
+                <p className="text-xs text-gray-600 mb-1">Search By Product Name</p>
                 <input
                   type="text"
                   value={filters.searchQuery}
