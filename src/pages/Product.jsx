@@ -4,6 +4,7 @@ import { FaEdit, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
 
 function Product() {
   const [rows, setRows] = useState([]);
@@ -225,23 +226,28 @@ function Product() {
     const unitNeedle = String(filters.unit || "").trim();
     const categoryNeedle = String(filters.categoryId || "");
 
-    return rows.filter((row) => {
-      if (nameNeedle) {
-        const rowName = String(row.name ?? "").toLowerCase();
-        if (!rowName.includes(nameNeedle)) return false;
-      }
-
-      if (unitNeedle) {
-        const rowUnit = String(row.unit ?? "");
-        if (!rowUnit.includes(unitNeedle)) return false;
-      }
-
+    // First, apply exact category filter
+    let results = rows.filter((row) => {
       if (categoryNeedle) {
         if (String(row.category_id ?? "") !== categoryNeedle) return false;
       }
-
       return true;
     });
+
+    // Apply fuzzy search for name if provided
+    if (nameNeedle) {
+      results = fuzzyFilterAndSort(results, nameNeedle, ["name"]);
+    }
+
+    // Apply unit filter (substring) if provided
+    if (unitNeedle) {
+      results = results.filter((row) => {
+        const rowUnit = String(row.unit ?? "");
+        return rowUnit.includes(unitNeedle);
+      });
+    }
+
+    return results;
   }, [rows, filters]);
 
   const sortedFilteredRows = useMemo(() => {

@@ -5,6 +5,8 @@ import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
 
+import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
+
 const formatDateTime = (value) => {
   if (!value) return "";
   const date = new Date(value);
@@ -122,10 +124,8 @@ function Feedback() {
     const q = String(filters.q || "").trim().toLowerCase();
     if (!q) return sortedRows;
 
-    return sortedRows.filter((f) => {
-      const hay = `${f?.name ?? ""} ${f?.message ?? ""} ${f?.rate ?? ""}`.toLowerCase().trim();
-      return hay.includes(q);
-    });
+    // Use fuzzy search across feedback fields for better search results
+    return fuzzyFilterAndSort(sortedRows, q, ["name", "message", "rate"]);
   }, [filters.q, sortedRows]);
 
   const totalPages = useMemo(() => {

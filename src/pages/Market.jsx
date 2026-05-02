@@ -4,6 +4,7 @@ import { FaCheckSquare, FaEdit, FaRegSquare, FaSyncAlt, FaTimes, FaTrash } from 
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
 
 function Market() {
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -24,6 +25,7 @@ function Market() {
     priceTypeId: "",
     economicCenterId: "",
     verified: "", // "" | "true" | "false"
+    searchQuery: "", // Fuzzy text search across product name and price
   });
 
   const [products, setProducts] = useState([]);
@@ -303,7 +305,9 @@ function Market() {
   const filteredRows = useMemo(() => {
     const dateNeedle = String(filters.date || "").trim();
     const verifiedFilter = String(filters.verified || "");
-    return sortedRows.filter((row) => {
+    const searchQuery = String(filters.searchQuery || "").trim();
+
+    let results = sortedRows.filter((row) => {
       if (dateNeedle) {
         const rowDate = String(row.date ?? "");
         if (!rowDate.includes(dateNeedle)) return false;
@@ -329,7 +333,18 @@ function Market() {
 
       return true;
     });
-  }, [sortedRows, filters]);
+
+    // Apply fuzzy search on product names and prices if search query is provided
+    if (searchQuery) {
+      const enrichedRows = results.map((row) => ({
+        ...row,
+        productName: productById.get(String(row.product_id))?.name ?? String(row.product_id) ?? "",
+      }));
+      results = fuzzyFilterAndSort(enrichedRows, searchQuery, ["productName", "price"]);
+    }
+
+    return results;
+  }, [sortedRows, filters, productById]);
 
   const totalPages = useMemo(() => {
     const size = Math.max(1, Number(pageSize) || 10);
@@ -760,12 +775,27 @@ function Market() {
                   type="button"
                   className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
                   onClick={() => {
-                    setFilters({ date: todayISO, productId: "", priceTypeId: "", economicCenterId: "", verified: "" });
+                    setFilters({ date: todayISO, productId: "", priceTypeId: "", economicCenterId: "", verified: "", searchQuery: "" });
                     setCurrentPage(1);
                   }}
                 >
                   Reset
                 </button>
+              </div>
+
+              {/* Fuzzy text search field for product names and prices */}
+              <div className="mt-3">
+                <p className="text-xs text-gray-600 mb-1">Search (Product Name or Price)</p>
+                <input
+                  type="text"
+                  value={filters.searchQuery}
+                  onChange={(e) => {
+                    setFilters((f) => ({ ...f, searchQuery: e.target.value }));
+                    setCurrentPage(1);
+                  }}
+                  className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                  placeholder="Type to search..."
+                />
               </div>
             </div>
 

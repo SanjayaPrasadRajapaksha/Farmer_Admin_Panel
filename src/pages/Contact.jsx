@@ -4,6 +4,7 @@ import { FaEye, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
 
 const formatDateTime = (value) => {
   if (!value) return "";
@@ -95,15 +96,11 @@ function Contact() {
   }, [rows]);
 
   const filteredRows = useMemo(() => {
-    const q = String(filters.q || "").trim().toLowerCase();
+    const q = String(filters.q || "").trim();
     if (!q) return sortedRows;
 
-    return sortedRows.filter((c) => {
-      const hay = `${c?.name ?? ""} ${c?.email ?? ""} ${c?.phoneNumber ?? ""} ${c?.message ?? ""}`
-        .toLowerCase()
-        .trim();
-      return hay.includes(q);
-    });
+    // Use fuzzy search across contact fields for better search results
+    return fuzzyFilterAndSort(sortedRows, q, ["name", "email", "phoneNumber", "message"]);
   }, [filters.q, sortedRows]);
 
   const totalPages = useMemo(() => {

@@ -4,6 +4,7 @@ import { FaEye, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { fuzzyFilterAndSort } from "../utils/fuzzySearch";
 
 const toBoolFilter = (value) => {
   if (value === "true") return true;
@@ -100,20 +101,22 @@ function User() {
   }, [rows]);
 
   const filteredRows = useMemo(() => {
-    const q = String(filters.q || "").trim().toLowerCase();
+    const q = String(filters.q || "").trim();
     const verifiedNeedle = toBoolFilter(filters.verified);
 
-    return sortedRows.filter((u) => {
-      if (q) {
-        const hay = `${u?.name ?? ""} ${u?.email ?? ""} ${u?.phone ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
+    let results = sortedRows;
 
-      if (verifiedNeedle !== null) {
-        if (Boolean(u?.isVerified) !== verifiedNeedle) return false;
-      }
-      return true;
-    });
+    // Apply text search with fuzzy matching if query is provided
+    if (q) {
+      results = fuzzyFilterAndSort(results, q, ["name", "email", "phone"]);
+    }
+
+    // Apply verified filter
+    if (verifiedNeedle !== null) {
+      results = results.filter((u) => Boolean(u?.isVerified) === verifiedNeedle);
+    }
+
+    return results;
   }, [filters, sortedRows]);
 
   const totalPages = useMemo(() => {
