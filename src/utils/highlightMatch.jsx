@@ -1,4 +1,3 @@
-import React from "react";
 
 export function highlightMatchedText(text, query, highlightClass = "bg-yellow-200") {
   const original = String(text ?? "");
