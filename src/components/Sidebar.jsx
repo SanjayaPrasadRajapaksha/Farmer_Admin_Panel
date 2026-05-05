@@ -1,17 +1,41 @@
+import { useMemo } from "react";
 import {
-    FaChartBar,
-    FaCog,
-    FaComments,
-    FaQuestionCircle,
-    FaStore,
-    FaTachometerAlt,
-    FaUsers,
-    FaBox,
-    FaEnvelope 
+  FaBox,
+  FaChartBar,
+  FaCog,
+  FaComments,
+  FaEnvelope,
+  FaQuestionCircle,
+  FaStore,
+  FaTachometerAlt,
+  FaUsers
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
-function Sidebar() {
+const decodeJwtPayload = (token) => {
+  try {
+    const parts = String(token || "").split(".");
+    if (parts.length < 2) return null;
+
+    const base64Url = parts[1];
+    const base64 = base64Url.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const json = globalThis.atob ? globalThis.atob(padded) : null;
+
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
+};
+
+// eslint-disable-next-line react/prop-types
+function Sidebar({ token }) {
+  const role = useMemo(() => {
+    const payload = decodeJwtPayload(token);
+    return String(payload?.role || "").toLowerCase();
+  }, [token]);
+
+  const isSuperAdmin = role === "super admin";
   const linkClass =
     "flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-200 text-base";
 
@@ -57,16 +81,6 @@ function Sidebar() {
           <span className="font-medium">Report & Analytics</span>
         </NavLink>
 
-        {/* <NavLink
-          to="/chart"
-          className={({ isActive }) =>
-            `${linkClass} ${isActive ? activeClass : inactiveClass}`
-          }
-        >
-          <FaComments className={iconClass} />
-          <span className="font-medium">Chart</span>
-        </NavLink> */}
-
         <NavLink
           to="/product"
           className={({ isActive }) =>
@@ -86,6 +100,18 @@ function Sidebar() {
           <FaUsers className={iconClass} />
           <span className="font-medium">Farmer</span>
         </NavLink>
+
+        {isSuperAdmin && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `${linkClass} ${isActive ? activeClass : inactiveClass}`
+            }
+          >
+            <FaComments className={iconClass} />
+            <span className="font-medium">Admin</span>
+          </NavLink>
+        )}
 
         <NavLink
           to="/feedback"

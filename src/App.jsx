@@ -4,16 +4,17 @@ import { ToastContainer } from 'react-toastify'
 import Login from "./components/Login"
 import Navbar from "./components/Navbar"
 import Sidebar from "./components/sidebar"
+import Admin from "./pages/Admin"
 import Chart from "./pages/Chart"
-import Farmer from "./pages/Farmer"
+import Contact from "./pages/Contact"
 import Dashboard from "./pages/Dashboard"
 import FAQ from "./pages/FAQ"
+import Farmer from "./pages/Farmer"
 import Feedback from "./pages/Feedback"
 import Market from "./pages/Market"
 import Product from "./pages/Product"
 import Report from "./pages/Report"
 import Setting from "./pages/Setting"
-import Contact from "./pages/Contact"
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
 export const currency = '$'
@@ -34,7 +35,7 @@ function App() {
           </header>
           <div className="flex w-full flex-1 min-h-0">
             <aside className="shrink-0 self-stretch min-h-0">
-              <Sidebar />
+              <Sidebar token={token} />
             </aside>
             <main className="flex-1 min-h-0 overflow-y-auto">
               <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-8 text-gray-600 text-base">
@@ -49,6 +50,7 @@ function App() {
                   <Route path="/chart" element={<Chart />} />
                   <Route path="/farmer" element={<Farmer token={token} />} />
                   <Route path="/contact" element={<Contact token={token} />} />
+                  <Route path="/admin" element={<Admin />} />
                 </Routes>
 
               </div>
