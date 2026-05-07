@@ -9,7 +9,7 @@ const decodeJwtPayload = (token) => {
         const parts = String(token || "").split(".");
         if (parts.length < 2) return null;
         const base64Url = parts[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const base64 = base64Url.replaceAll("-", "+").replaceAll("_", "/");
         const padLen = (4 - (base64.length % 4)) % 4;
         const padded = base64 + "=".repeat(padLen);
         const json = globalThis.atob ? globalThis.atob(padded) : null;
@@ -18,6 +18,13 @@ const decodeJwtPayload = (token) => {
     } catch {
         return null;
     }
+};
+
+const normalizeProfile = (value) => {
+    if (Array.isArray(value)) {
+        return value[0] ?? null;
+    }
+    return value && typeof value === "object" ? value : null;
 };
 
 
@@ -53,6 +60,13 @@ const Login = ({setToken}) => {
             if (role && !role.includes("admin")) {
                 toast.error("Only admins can login to the admin panel");
                 return;
+            }
+
+            const profile = normalizeProfile(data?.result ?? data?.user ?? null);
+            if (profile && typeof profile === "object") {
+                const safeProfile = { ...profile };
+                delete safeProfile.password;
+                localStorage.setItem("adminProfile", JSON.stringify(safeProfile));
             }
 
             setToken(token);

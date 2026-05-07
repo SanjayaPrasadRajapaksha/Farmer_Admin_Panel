@@ -22,7 +22,12 @@ export const currency = '$'
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : '');
   useEffect(() => {
-    localStorage.setItem('token', token);
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('adminProfile');
+    }
   }, [token])
   return (
     <div className='bg-gray-50 h-screen flex flex-col overflow-hidden'>
@@ -45,7 +50,7 @@ function App() {
                   <Route path="/report" element={<Report token={token} />} />
                   <Route path="/feedback" element={<Feedback token={token} />} />
                   <Route path="/faq" element={<FAQ />} />
-                  <Route path="/setting" element={<Setting />} />
+                  <Route path="/setting" element={<Setting token={token} />} />
                   <Route path="/product" element={<Product />} />
                   <Route path="/chart" element={<Chart />} />
                   <Route path="/farmer" element={<Farmer token={token} />} />
