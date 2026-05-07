@@ -6,6 +6,7 @@ import { TiArrowSortedDown, TiArrowSortedUp } from "react-icons/ti";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { highlightMatchedText, matchesSearch } from "../utils/highlightMatch";
 
 const getLocalISODate = () => {
   const date = new Date();
@@ -44,6 +45,7 @@ function Report() {
   const [differenceMode, setDifferenceMode] = useState("D_MINUS_T");
   const [predDifferenceMode, setPredDifferenceMode] = useState("D_MINUS_T");
   const [productSortOrder, setProductSortOrder] = useState("none"); // "none", "asc", "desc"
+  const [productSearchMode, setProductSearchMode] = useState("contains");
 
   const productById = useMemo(() => {
     const map = new Map();
@@ -333,8 +335,7 @@ function Report() {
 
     let filtered = tableRows.filter((r) => {
       if (nameNeedle) {
-        const n = String(r.name ?? "").toLowerCase();
-        if (!n.includes(nameNeedle)) return false;
+        if (!matchesSearch(r.name, nameNeedle, productSearchMode)) return false;
       }
 
       if (categoryNeedle) {
@@ -352,7 +353,7 @@ function Report() {
     }
 
     return filtered;
-  }, [tableRows, filters, productSortOrder]);
+  }, [tableRows, filters, productSortOrder, productSearchMode]);
 
   const totalPages = useMemo(() => {
     const size = Math.max(1, Number(pageSize) || 10);
@@ -634,7 +635,7 @@ function Report() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
             <input
@@ -647,6 +648,21 @@ function Report() {
               }}
               placeholder="Search by product name"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search Type</label>
+            <select
+              className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none bg-white"
+              value={productSearchMode}
+              onChange={(e) => {
+                setProductSearchMode(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="contains">Contains</option>
+              <option value="fuzzy">Fuzzy</option>
+            </select>
           </div>
 
           <div>
@@ -676,6 +692,7 @@ function Report() {
             className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
             onClick={() => {
               setFilters({ productName: "", categoryId: "" });
+              setProductSearchMode("contains");
               setSelectedDate(getLocalISODate());
               setCurrentPage(1);
             }}
@@ -785,7 +802,9 @@ function Report() {
                     const predDiffDT = getPredDifferenceByMode(r.dPred, r.tPred);
                     return (
                       <tr key={r.productId} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 border-b">{r.name}</td>
+                        <td className="px-4 py-3 border-b">
+                          {highlightMatchedText(r.name, filters.productName, "bg-yellow-200", productSearchMode)}
+                        </td>
                         <td className="px-4 py-3 border-b">
                           <span className="inline-flex items-center gap-2">
                             <span>{formatPrice(r.dToday)}</span>

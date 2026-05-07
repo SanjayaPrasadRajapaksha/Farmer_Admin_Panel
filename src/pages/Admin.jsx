@@ -4,6 +4,7 @@ import { FaEye, FaPlus, FaSyncAlt, FaTimes, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { highlightMatchedText, matchesSearch } from "../utils/highlightMatch";
 
 const emptyForm = {
   name: "",
@@ -22,6 +23,7 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState("contains");
   const [statusFilter, setStatusFilter] = useState("all");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,11 +98,11 @@ function Admin() {
         if (statusFilter === "inactive" && isActive) return false;
 
         if (!needle) return true;
-        const text = [user?.name, user?.email, user?.phone, user?.address, position].filter(Boolean).join(" ").toLowerCase();
-        return text.includes(needle);
+        const fields = [user?.name, user?.email, user?.phone, user?.address, position];
+        return fields.some((value) => matchesSearch(value, needle, searchMode));
       })
       .sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
-  }, [users, query, statusFilter, roleMap]);
+  }, [users, query, statusFilter, roleMap, searchMode]);
 
   const totalPages = useMemo(() => {
     const size = Math.max(1, Number(pageSize) || 10);
@@ -220,7 +222,7 @@ function Admin() {
       </div>
 
       <div className="mt-5 bg-white border border-gray-200 rounded-md p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2">
             <div className="text-xs text-gray-500">Search</div>
             <div className="relative mt-2">
@@ -236,6 +238,22 @@ function Admin() {
                 disabled={loading}
               />
             </div>
+          </div>
+
+          <div>
+            <div className="text-xs text-gray-500">Search Type</div>
+            <select
+              value={searchMode}
+              onChange={(e) => {
+                setSearchMode(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+              disabled={loading}
+            >
+              <option value="contains">Contains</option>
+              <option value="fuzzy">Fuzzy</option>
+            </select>
           </div>
 
           <div>
@@ -279,16 +297,18 @@ function Admin() {
                 <tr key={user?.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 border-b">{user?.id ?? "-"}</td>
                   <td className="px-4 py-3 border-b">
-                    <div className="font-semibold text-gray-900">{user?.name || "Unnamed admin"}</div>
+                    <div className="font-semibold text-gray-900">
+                      {highlightMatchedText(user?.name || "Unnamed admin", query, "bg-yellow-200", searchMode)}
+                    </div>
                   </td>
                   <td className="px-4 py-3 border-b max-w-[220px] truncate" title={user?.email || ""}>
-                    {user?.email || "-"}
+                    {highlightMatchedText(user?.email || "-", query, "bg-yellow-200", searchMode)}
                   </td>
                   <td className="px-4 py-3 border-b max-w-[160px] truncate" title={user?.phone || ""}>
-                    {user?.phone || "-"}
+                    {highlightMatchedText(user?.phone || "-", query, "bg-yellow-200", searchMode)}
                   </td>
                   <td className="px-4 py-3 border-b max-w-[240px] truncate" title={user?.address || ""}>
-                    {user?.address || "-"}
+                    {highlightMatchedText(user?.address || "-", query, "bg-yellow-200", searchMode)}
                   </td>
                   <td className="px-4 py-3 border-b">
                     <button
@@ -343,6 +363,7 @@ function Admin() {
               className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
               onClick={() => {
                 setQuery("");
+                setSearchMode("contains");
                   setStatusFilter("all");
                 setCurrentPage(1);
               }}
