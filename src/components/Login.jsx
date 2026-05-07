@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { backendUrl } from "../App";
 
@@ -31,6 +32,7 @@ const normalizeProfile = (value) => {
 const Login = ({setToken}) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const onSubmitHandler = async (e) => {
@@ -96,7 +98,24 @@ const Login = ({setToken}) => {
                     </div>
                     <div className="mb-3 min-w-72">
                         <p className="text-sm font-medium text-gray-700 mb-2">Password</p>
-                        <input onChange={(e) => setPassword(e.target.value)} value={password} className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none" type="password" placeholder="Enter your password" required />
+                        <div className="relative">
+                            <input
+                                onChange={(e) => setPassword(e.target.value)}
+                                value={password}
+                                className="rounded-md w-full px-3 py-2 pr-10 border border-gray-300 outline-none"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Enter your password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </button>
+                        </div>
                     </div>
                     <button
                         className="mt-2 w-full py-2 px-4 rounded-md text-white bg-black disabled:opacity-60"
