@@ -72,6 +72,7 @@ const getUserIdErrorMessage = (token, payload) => {
 };
 
 function Setting({ token: appToken = "" }) {
+  // Initialize from local cache to avoid an empty card before API response arrives.
   const storedProfile = loadStoredProfile();
   const [tokenState, setTokenState] = useState(() => {
     const initialToken = appToken || localStorage.getItem("token") || "";
@@ -82,6 +83,7 @@ function Setting({ token: appToken = "" }) {
   const token = tokenState;
   
   const payload = useMemo(() => {
+    // Decode token payload once per token change to extract current user identity.
     if (!token) {
       console.log("⚠️ No token to decode");
       return null;
@@ -107,6 +109,7 @@ function Setting({ token: appToken = "" }) {
   const [passwordForm, setPasswordForm] = useState(emptyPasswordForm);
 
   useEffect(() => {
+    // Keep local token state synchronized with App-level auth state.
     const freshToken = appToken || localStorage.getItem("token") || "";
     if (freshToken !== token) {
       console.log("🔄 Token synced from App/localStorage");
@@ -115,6 +118,7 @@ function Setting({ token: appToken = "" }) {
   }, [appToken, token]);
 
   useEffect(() => {
+    // Rehydrate profile/form from localStorage when available.
     const savedProfile = loadStoredProfile();
     if (savedProfile) {
       setProfile((current) => current ?? savedProfile);
@@ -126,6 +130,7 @@ function Setting({ token: appToken = "" }) {
   }, [appToken]);
 
   const fetchProfile = useCallback(async () => {
+    // Load latest profile from API and persist it locally for fast future loads.
     if (!userId) {
       const msg = getUserIdErrorMessage(token, payload);
       console.error("Profile fetch failed:", msg);
@@ -154,6 +159,7 @@ function Setting({ token: appToken = "" }) {
   }, [userId, token, payload]);
 
   const changePassword = async (event) => {
+    // Validate password inputs on client side before sending update request.
     event.preventDefault();
 
     if (!userId) {
@@ -207,6 +213,7 @@ function Setting({ token: appToken = "" }) {
   }, [fetchProfile]);
 
   const submitProfile = async (event) => {
+    // Update profile details and reload from server to keep UI authoritative.
     event.preventDefault();
 
     if (!userId) {

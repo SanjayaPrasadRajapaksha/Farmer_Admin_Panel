@@ -18,6 +18,7 @@ const emptyForm = {
 const normalizeText = (value) => String(value ?? "").trim().toLowerCase();
 
 function Admin() {
+  // Core page state: data, filters, pagination, and modal visibility.
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ function Admin() {
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const roleMap = useMemo(() => {
+    // Fast lookup table for resolving role details by id while rendering rows.
     const map = new Map();
     for (const role of roles) {
       map.set(String(role?.id ?? ""), role);
@@ -76,6 +78,7 @@ function Admin() {
   };
 
   useEffect(() => {
+    // Refresh both roles and users whenever refreshKey changes.
     fetchRoles();
     fetchUsers();
   }, [refreshKey]);
@@ -86,6 +89,7 @@ function Admin() {
   }, [adminRole?.id]);
 
   const filteredUsers = useMemo(() => {
+    // Apply role/status/search filters, then keep newest records first.
     const needle = normalizeText(query);
 
     return users
@@ -114,12 +118,14 @@ function Admin() {
   }, [totalPages]);
 
   const pagedUsers = useMemo(() => {
+    // Slice the filtered list to show only the active page.
     const size = Math.max(1, Number(pageSize) || 10);
     const start = (currentPage - 1) * size;
     return filteredUsers.slice(start, start + size);
   }, [filteredUsers, currentPage, pageSize]);
 
   const submitCreate = async (event) => {
+    // Create a new admin account with the selected admin role.
     event.preventDefault();
 
     if (!adminRole?.id) {
@@ -156,6 +162,7 @@ function Admin() {
   };
 
   const toggleActive = async (user) => {
+    // Toggle account activation state and refresh table data.
     try {
       await axios.put(backendUrl + `/api/user/activateUserById/${user.id}`, { status: !user?.isActive });
       toast.success("Admin updated");
@@ -167,6 +174,7 @@ function Admin() {
   };
 
   const deleteAdmin = async (user) => {
+    // Confirm destructive action before deleting an admin account.
     const ok = globalThis.confirm(`Delete admin ${user?.name || user?.email}?`);
     if (!ok) return;
 
