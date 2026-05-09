@@ -92,6 +92,16 @@ function Sidebar({ token }) {
         </NavLink>
 
         <NavLink
+          to="/category"
+          className={({ isActive }) =>
+            `${linkClass} ${isActive ? activeClass : inactiveClass}`
+          }
+        >
+          <FaQuestionCircle className={iconClass} />
+          <span className="font-medium">Category</span>
+        </NavLink>
+
+        <NavLink
           to="/farmer"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
@@ -122,14 +132,14 @@ function Sidebar({ token }) {
           <FaComments className={iconClass} />
           <span className="font-medium">Feedback</span>
         </NavLink>
-        
-         <NavLink
+
+        <NavLink
           to="/contact"
           className={({ isActive }) =>
             `${linkClass} ${isActive ? activeClass : inactiveClass}`
           }
         >
-          <FaEnvelope  className={iconClass} />
+          <FaEnvelope className={iconClass} />
           <span className="font-medium">Contact</span>
         </NavLink>
 

@@ -15,6 +15,7 @@ import Market from "./pages/Market"
 import Product from "./pages/Product"
 import Report from "./pages/Report"
 import Setting from "./pages/Setting"
+import Category from "./pages/Category"
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
 export const currency = '$'
@@ -56,6 +57,7 @@ function App() {
                   <Route path="/farmer" element={<Farmer token={token} />} />
                   <Route path="/contact" element={<Contact token={token} />} />
                   <Route path="/admin" element={<Admin />} />
+                  <Route path="/category" element={<Category />} />
                 </Routes>
 
               </div>
