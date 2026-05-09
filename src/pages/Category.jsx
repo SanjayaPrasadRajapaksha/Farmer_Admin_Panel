@@ -13,6 +13,7 @@ const emptyForm = {
 const normalizeText = (value) => String(value ?? "").trim().toLowerCase();
 
 function Category() {
+  // Core page state: category data, loading state, filters, pagination, and modal/form state.
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -25,6 +26,7 @@ function Category() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Load categories from the backend and refresh the list after any CRUD operation.
   const fetchCategories = async () => {
     setLoading(true);
     try {
@@ -44,6 +46,7 @@ function Category() {
     fetchCategories();
   }, [refreshKey]);
 
+  // Apply the search filter first, then sort newest categories at the top.
   const filteredCategories = useMemo(() => {
     const needle = normalizeText(query);
     return categories
@@ -59,6 +62,7 @@ function Category() {
     setCurrentPage(1);
   }, [query]);
 
+  // Compute page count and slice the filtered list for the active page.
   const totalPages = useMemo(() => {
     const size = Math.max(1, Number(pageSize) || 10);
     return Math.max(1, Math.ceil(filteredCategories.length / size));
@@ -74,22 +78,26 @@ function Category() {
     return filteredCategories.slice(start, start + size);
   }, [filteredCategories, currentPage, pageSize]);
 
+  // Decide what the submit button should say based on edit/create state.
   let submitLabel = "Create Category";
   if (editingId) submitLabel = "Update Category";
   if (submitting) submitLabel = "Saving...";
 
+  // Open the modal with a blank form for a new category.
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
     setIsModalOpen(true);
   };
 
+  // Open the modal prefilled with the selected category for editing.
   const openEdit = (category) => {
     setEditingId(category.id);
     setForm({ name: category.name || "" });
     setIsModalOpen(true);
   };
 
+  // Submit either a create or an update request, then reload the list.
   const submitForm = async (e) => {
     e.preventDefault();
     const name = String(form.name || "").trim();
@@ -121,6 +129,7 @@ function Category() {
     }
   };
 
+  // Delete a category after confirmation, then reload the list.
   const deleteCategory = async (category) => {
     const ok = globalThis.confirm(`Delete category: ${category?.name || ""}?`);
     if (!ok) return;
@@ -137,6 +146,7 @@ function Category() {
 
   return (
     <div className="w-full">
+      {/* Header and action buttons */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">Category Management</h1>
@@ -166,6 +176,7 @@ function Category() {
         </div>
       </div>
 
+      {/* Search area used to filter the table by category name */}
       <div className="mt-5 bg-white border border-gray-200 rounded-md p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
@@ -181,6 +192,7 @@ function Category() {
         </div>
       </div>
 
+      {/* Category table with edit/delete actions and client-side pagination */}
       <div className="mt-5 bg-white border border-gray-200 rounded-lg overflow-x-auto">
         {loading ? (
           <LoadingSpinner label="Loading categories..." />
@@ -237,6 +249,7 @@ function Category() {
           </table>
         )}
 
+        {/* Footer controls for page size and navigation */}
         {loading || filteredCategories.length === 0 ? null : (
           <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 text-gray-700">
             <div className="text-sm">
@@ -282,6 +295,7 @@ function Category() {
         )}
       </div>
 
+      {/* Create / edit modal */}
       {isModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-xl rounded-md bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
