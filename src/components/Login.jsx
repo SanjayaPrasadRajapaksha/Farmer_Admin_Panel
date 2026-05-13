@@ -28,7 +28,7 @@ const normalizeProfile = (value) => {
     return value && typeof value === "object" ? value : null;
 };
 
-
+// eslint-disable-next-line react/prop-types
 const Login = ({setToken}) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -88,15 +88,15 @@ const Login = ({setToken}) => {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center w-full">
-            <div className="bg-white shadow-md rounded-lg px-8 py-6 max-w-md">
-                <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
+        <div className="min-h-screen flex items-center justify-center w-full px-4">
+            <div className="bg-white shadow-md rounded-lg px-6 sm:px-8 py-6 w-full max-w-md">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-center">Admin Panel</h1>
                 <form onSubmit={onSubmitHandler}>
-                    <div className="mb-3 min-w-72">
+                    <div className="mb-3">
                         <p className="text-sm font-medium text-gray-700 mb-2">Email Address</p>
                         <input onChange={(e) => setEmail(e.target.value)} value={email} className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none" type="text" placeholder="your@gmail.com" required />
                     </div>
-                    <div className="mb-3 min-w-72">
+                    <div className="mb-3">
                         <p className="text-sm font-medium text-gray-700 mb-2">Password</p>
                         <div className="relative">
                             <input
