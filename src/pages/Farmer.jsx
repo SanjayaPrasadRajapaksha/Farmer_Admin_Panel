@@ -17,6 +17,9 @@ function User() {
   const [loading, setLoading] = useState(false);
   const [refLoading, setRefLoading] = useState(false);
   const [refError, setRefError] = useState("");
+  const [sendingReport, setSendingReport] = useState(false);
+  const [reportSubject, setReportSubject] = useState("Daily Market Report");
+  const [reportFile, setReportFile] = useState(null);
 
   const [rows, setRows] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -170,6 +173,39 @@ function User() {
     }
   };
 
+  const sendDailyReport = async () => {
+    if (!reportFile) {
+      toast.error("Please choose a PDF report first");
+      return;
+    }
+
+    const name = String(reportFile?.name || "").toLowerCase();
+    if (!name.endsWith(".pdf")) {
+      toast.error("Only PDF files are allowed");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("subject", reportSubject || "Daily Market Report");
+    formData.append("report", reportFile);
+
+    setSendingReport(true);
+    try {
+      const res = await axios.post(backendUrl + "/api/daily_email/sendCustomerReport", formData);
+      const result = res?.data?.result || {};
+      toast.success(
+        `Report sent: ${result.sentCount || 0}/${result.totalCustomers || 0} customers` +
+          ((result.failedCount || 0) > 0 ? ` (${result.failedCount} failed)` : "")
+      );
+      setReportFile(null);
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || error.message || "Failed to send report");
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
   const title = "Farmers Management";
 
   return (
@@ -196,7 +232,48 @@ function User() {
       </div>
 
       <div className="mt-5 bg-white border border-gray-200 rounded-md p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+          <h2 className="text-sm font-semibold text-gray-800">Send Daily Report To All Customers</h2>
+          <p className="text-xs text-gray-600 mt-1">Upload a PDF report and send it to every active customer at once.</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div className="md:col-span-2">
+              <div className="text-xs text-gray-500">Email subject</div>
+              <input
+                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md"
+                value={reportSubject}
+                onChange={(e) => setReportSubject(e.target.value)}
+                placeholder="Daily Market Report"
+                disabled={sendingReport}
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500">PDF file</div>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md bg-white"
+                onChange={(e) => setReportFile(e.target.files?.[0] || null)}
+                disabled={sendingReport}
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs text-gray-600 truncate">{reportFile ? `Selected: ${reportFile.name}` : "No PDF selected"}</p>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md border border-gray-300 bg-white text-sm disabled:opacity-60"
+              onClick={sendDailyReport}
+              disabled={sendingReport || !reportFile}
+            >
+              {sendingReport ? "Sending..." : "Send Report"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-gray-500">Search</div>
             <input
